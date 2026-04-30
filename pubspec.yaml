@@ -5,21 +5,25 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.11.4
+  # Versi 3.0.0 ke atas lebih stabil untuk Supabase 2.x
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  # Package Supabase sudah benar
+  supabase_flutter: ^2.12.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0 # Versi 6.0.0 belum ada, standar sekarang 3.0.0 atau 4.0.0
 
 flutter:
   uses-material-design: true
 
-  # Bagian aset yang sudah diperbaiki
+  # Aset sudah benar jalurnya
   assets:
     - assets/images/logo.png
+    - assets/images/google_logo.png

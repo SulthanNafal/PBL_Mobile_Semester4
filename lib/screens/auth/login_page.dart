@@ -7,7 +7,6 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Background merah sesuai gambar referensi
       backgroundColor: const Color(0xFFF24E4E),
       body: Center(
         child: SingleChildScrollView(
@@ -28,11 +27,10 @@ class LoginPage extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo diambil dari folder assets/images/
                 Image.asset(
                   'assets/images/logo.png',
                   height: 120,
-                  fit: MainAxisSize.min == MainAxisSize.min ? BoxFit.contain : BoxFit.fill,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 12),
                 const Text(
@@ -75,28 +73,37 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
 
-                // Lupa Password
+                // --- BAGIAN LUPA PASSWORD (HANYA FORGOT YANG BISA DIKLIK & EFEK GELAP) ---
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      // Tambahkan navigasi lupa password di sini jika perlu
-                    },
-                    child: RichText(
-                      text: const TextSpan(
-                        text: "Lupa Password? ",
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Lupa Password? ",
                         style: TextStyle(color: Colors.black, fontSize: 13),
-                        children: [
-                          TextSpan(
-                            text: "Forgot",
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
                       ),
-                    ),
+                      TextButton(
+                        onPressed: () {
+                          // Pastikan route ini sudah ada di app_routes.dart kamu
+                          Navigator.pushNamed(context, AppRoutes.forgotPassword);
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.black.withOpacity(0.2), // Efek menggelap tipis
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          "Forgot",
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -132,39 +139,57 @@ class LoginPage extends StatelessWidget {
                 // Tombol Login Google
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: Image.network(
-                      'https://tinyurl.com/google-logo-png-transparent', // Fallback link icon Google
-                      height: 20,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata, size: 30),
-                    ),
-                    label: const Text(
-                      "Login dengan Google",
-                      style: TextStyle(color: Colors.black87),
-                    ),
+                  height: 50,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      // Logika Login Google
+                    },
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: Colors.grey.shade300),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/images/google_logo.png',
+                          height: 24,
+                          fit: BoxFit.contain,
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          "Login dengan Google",
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 24),
 
-                // Link ke Register
+                // --- Link ke Register ---
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Belum punya akun? ", style: TextStyle(fontSize: 13)),
-                    GestureDetector(
-                      onTap: () {
-                        // Navigasi menggunakan sistem Named Routes
+                    TextButton(
+                      onPressed: () {
                         Navigator.pushNamed(context, AppRoutes.register);
                       },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.black.withOpacity(0.1),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       child: const Text(
                         "Daftar",
                         style: TextStyle(
