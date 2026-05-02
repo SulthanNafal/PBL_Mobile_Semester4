@@ -1,5 +1,8 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../routes/app_routes.dart'; // Sesuaikan path routes kamu
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../main.dart'; // Pastikan path ke main.dart bener (tempat variabel supabase)
+import '../../utils/hash.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -9,20 +12,78 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  // State untuk visibilitas password
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
-  // Controller untuk ambil data input
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
 
+  // GENERATE ID RANDOM 20 KARAKTER (Uppercase + Angka)
+  String _generateRandomId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    return List.generate(20, (index) => chars[Random().nextInt(chars.length)]).join();
+  }
+
+  // FUNGSI REGISTER
+  Future<void> _handleRegister() async {
+    // 1. Validasi Input
+    if (_emailController.text.isEmpty ||
+        _passwordController.text.isEmpty ||
+        _usernameController.text.isEmpty) {
+      _showMsg("Semua field wajib diisi!");
+      return;
+    }
+
+    if (_passwordController.text != _confirmController.text) {
+      _showMsg("Password tidak cocok!");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 2. PROSES HASH PASSWORD (Sesuai rumus lo)
+      String passwordHashed = HashCustom.encrypt(_passwordController.text.trim());
+
+      // 3. DAFTAR KE SUPABASE AUTH (Gunakan password yang sudah di-hash)
+      final AuthResponse res = await supabase.auth.signUp(
+        email: _emailController.text.trim(),
+        password: passwordHashed,
+      );
+
+      if (res.user != null) {
+        // 4. SIMPAN DATA KE TABEL USERS (Schema 'ursaevent')
+        await supabase.schema('ursaevent').from('users').insert({
+          'id': _generateRandomId(), // ID Custom 20 Karakter
+          'username': _usernameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'password': passwordHashed, // Simpan password ter-hash
+          'level': 'user', // Otomatis level user
+          'created_at': DateTime.now().toIso8601String(),
+        });
+
+        _showMsg("Registrasi Berhasil! Silakan Login.");
+        if (mounted) Navigator.pop(context); // Kembali ke halaman Login
+      }
+    } on AuthException catch (error) {
+      _showMsg(error.message);
+    } catch (error) {
+      _showMsg("Terjadi kesalahan: $error");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showMsg(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Background Merah identik dengan Login
       backgroundColor: const Color(0xFFF24E4E),
       body: Center(
         child: SingleChildScrollView(
@@ -43,17 +104,9 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo (Samakan ukuran dengan Login)
-                Image.asset(
-                  'assets/images/logo.png',
-                  height: 100,
-                  fit: BoxFit.contain,
-                ),
+                Image.asset('assets/images/logo.png', height: 100, fit: BoxFit.contain),
                 const SizedBox(height: 12),
-                const Text(
-                  "Daftar Akun",
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                ),
+                const Text("Daftar Akun", style: TextStyle(color: Colors.grey, fontSize: 14)),
                 const Text(
                   "URSAEVENT",
                   style: TextStyle(
@@ -65,15 +118,12 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // Input Username
                 _buildTextField(
                   controller: _usernameController,
                   hint: "Username",
                   icon: Icons.person_outline,
                 ),
                 const SizedBox(height: 16),
-
-                // Input Email
                 _buildTextField(
                   controller: _emailController,
                   hint: "Email",
@@ -81,8 +131,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
-
-                // Input Password dengan Icon Mata
                 _buildTextField(
                   controller: _passwordController,
                   hint: "Password",
@@ -92,8 +140,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   onToggle: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
                 const SizedBox(height: 16),
-
-                // Input Konfirmasi Password
                 _buildTextField(
                   controller: _confirmController,
                   hint: "Ulangi Password",
@@ -104,47 +150,33 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // Tombol Daftar Utama
+                // TOMBOL DAFTAR
                 SizedBox(
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Logika daftar Supabase
-                    },
+                    onPressed: _isLoading ? null : _handleRegister,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFD32F2F),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text(
-                      "Daftar",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text("Daftar", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
 
                 const SizedBox(height: 24),
-
-                // Balik ke Login
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Sudah punya akun? ", style: TextStyle(fontSize: 13)),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.pop(context); // Kembali ke halaman Login
-                      },
+                      onTap: () => Navigator.pop(context),
                       child: const Text(
                         "Login",
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                     ),
                   ],
@@ -157,7 +189,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // Helper widget biar kode nggak berantakan (Reusable)
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -185,12 +216,10 @@ class _RegisterPageState extends State<RegisterPage> {
         )
             : null,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.grey.shade300)
         ),
       ),
     );
