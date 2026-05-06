@@ -10,7 +10,9 @@ class AppRoutes {
   static const String forgotPassword = '/forgot-password';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
-    switch (settings.name) {
+    final uri = Uri.parse(settings.name ?? '');
+
+    switch (uri.path) {
     // 1. Route Login
       case login:
         return MaterialPageRoute(
@@ -23,13 +25,13 @@ class AppRoutes {
           builder: (_) => const RegisterPage(),
         );
 
-    // 3. Route Forget Password (PASTIKAN nama class-nya ForgetPage)
+    // 3. Route Forget Password
       case forgotPassword:
         return MaterialPageRoute(
           builder: (_) => const ForgetPage(),
         );
 
-    // Default route jika alamat tidak ditemukan
+    // Default route
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(
