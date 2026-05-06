@@ -1,42 +1,98 @@
 import 'package:flutter/material.dart';
+
 import '../screens/auth/login_page.dart';
 import '../screens/auth/register_page.dart';
 import '../screens/auth/forget_page.dart';
+import '../screens/auth/reset_password_page.dart';
 
 class AppRoutes {
-  // Nama-nama route sebagai konstanta agar tidak typo
-  static const String login = '/';
-  static const String register = '/register';
-  static const String forgotPassword = '/forgot-password';
 
-  static Route<dynamic> generateRoute(RouteSettings settings) {
-    final uri = Uri.parse(settings.name ?? '');
+  // =========================
+  // ROUTE NAMES
+  // =========================
+
+  // LOGIN
+  static const String login = '/';
+
+  // REGISTER
+  static const String register =
+      '/register';
+
+  // FORGOT PASSWORD
+  static const String forgotPassword =
+      '/forgot-password';
+
+  // RESET PASSWORD
+  static const String resetPassword =
+      '/reset-password';
+
+  // =========================
+  // GENERATE ROUTE
+  // =========================
+  static Route<dynamic> generateRoute(
+      RouteSettings settings,
+      ) {
+
+    final uri = Uri.parse(
+      settings.name ?? '',
+    );
 
     switch (uri.path) {
-    // 1. Route Login
+
+    // =========================
+    // LOGIN PAGE
+    // =========================
       case login:
+
         return MaterialPageRoute(
-          builder: (_) => const LoginPage(),
+          builder: (_) =>
+          const LoginPage(),
         );
 
-    // 2. Route Register
+    // =========================
+    // REGISTER PAGE
+    // =========================
       case register:
+
         return MaterialPageRoute(
-          builder: (_) => const RegisterPage(),
+          builder: (_) =>
+          const RegisterPage(),
         );
 
-    // 3. Route Forget Password
+    // =========================
+    // FORGOT PASSWORD PAGE
+    // =========================
       case forgotPassword:
+
         return MaterialPageRoute(
-          builder: (_) => const ForgetPage(),
+          builder: (_) =>
+          const ForgetPage(),
         );
 
-    // Default route
-      default:
+    // =========================
+    // RESET PASSWORD PAGE
+    // =========================
+      case resetPassword:
+
         return MaterialPageRoute(
+          builder: (_) =>
+          const ResetPasswordPage(),
+        );
+
+    // =========================
+    // DEFAULT ERROR PAGE
+    // =========================
+      default:
+
+        return MaterialPageRoute(
+
           builder: (_) => Scaffold(
+
             body: Center(
-              child: Text('Halaman tidak ditemukan: ${settings.name}'),
+
+              child: Text(
+                'Halaman tidak ditemukan: ${settings.name}',
+              ),
             ),
           ),
         );

@@ -1,34 +1,74 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../main.dart';
+import '../../controllers/auth_controller.dart';
+import '../../routes/app_routes.dart';
 
-class ForgetPage extends StatefulWidget {
-  const ForgetPage({super.key});
+class ResetPasswordPage extends StatefulWidget {
+  const ResetPasswordPage({super.key});
 
   @override
-  State<ForgetPage> createState() =>
-      _ForgetPageState();
+  State<ResetPasswordPage> createState() =>
+      _ResetPasswordPageState();
 }
 
-class _ForgetPageState
-    extends State<ForgetPage> {
+class _ResetPasswordPageState
+    extends State<ResetPasswordPage> {
 
-  final _emailController =
+  final AuthController authController =
+  AuthController();
+
+  final _passwordController =
+  TextEditingController();
+
+  final _confirmPasswordController =
   TextEditingController();
 
   bool _isLoading = false;
 
+  bool _obscurePassword = true;
+
+  bool _obscureConfirmPassword = true;
+
   // =========================
-  // SEND RESET PASSWORD EMAIL
+  // RESET PASSWORD
   // =========================
   Future<void> _handleResetPassword() async {
 
-    // VALIDASI EMAIL KOSONG
-    if (_emailController.text.isEmpty) {
+    // =========================
+    // VALIDASI PASSWORD KOSONG
+    // =========================
+    if (_passwordController.text.isEmpty ||
+        _confirmPasswordController
+            .text
+            .isEmpty) {
 
       _showMsg(
-        "Masukkan email terlebih dahulu",
+        "Password wajib diisi",
+      );
+
+      return;
+    }
+
+    // =========================
+    // VALIDASI MINIMAL PASSWORD
+    // =========================
+    if (_passwordController.text.length < 6) {
+
+      _showMsg(
+        "Password minimal 6 karakter",
+      );
+
+      return;
+    }
+
+    // =========================
+    // VALIDASI KONFIRMASI PASSWORD
+    // =========================
+    if (_passwordController.text !=
+        _confirmPasswordController.text) {
+
+      _showMsg(
+        "Konfirmasi password tidak sama",
       );
 
       return;
@@ -41,47 +81,50 @@ class _ForgetPageState
     try {
 
       // =========================
-      // CEK EMAIL ADA / TIDAK
+      // UPDATE PASSWORD
       // =========================
-      final userData = await supabase
-          .schema('ursaevent')
-          .from('users')
-          .select()
-          .eq(
-        'email',
-        _emailController.text.trim(),
-      )
-          .maybeSingle();
+      final result =
+      await authController.updatePassword(
 
-      // EMAIL TIDAK DITEMUKAN
-      if (userData == null) {
+        newPassword:
+        _passwordController.text.trim(),
+      );
+
+      // =========================
+      // BERHASIL
+      // =========================
+      if (result == "success") {
 
         _showMsg(
-          "Email tidak ditemukan",
+          "Password berhasil diubah",
         );
 
-        return;
+        // kembali ke login
+        Future.delayed(
+          const Duration(seconds: 2),
+              () {
+
+            if (mounted) {
+
+              Navigator.pushNamedAndRemoveUntil(
+
+                context,
+
+                AppRoutes.login,
+
+                    (route) => false,
+              );
+            }
+          },
+        );
+
+      } else {
+
+        _showMsg(
+          result ??
+              "Gagal reset password",
+        );
       }
-
-      // =========================
-      // KIRIM EMAIL RESET PASSWORD
-      // =========================
-      await supabase.auth
-          .resetPasswordForEmail(
-
-        _emailController.text.trim(),
-
-        redirectTo:
-        'com.ursaevent.app://reset-password/',
-      );
-
-      _showMsg(
-        "Link reset password berhasil dikirim ke email",
-      );
-
-    } on AuthException catch (e) {
-
-      _showMsg(e.message);
 
     } catch (e) {
 
@@ -117,7 +160,9 @@ class _ForgetPageState
   @override
   void dispose() {
 
-    _emailController.dispose();
+    _passwordController.dispose();
+
+    _confirmPasswordController.dispose();
 
     super.dispose();
   }
@@ -181,17 +226,17 @@ class _ForgetPageState
                   color: Color(0xFFD32F2F),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 // =========================
                 // TITLE
                 // =========================
                 const Text(
 
-                  "Lupa Password?",
+                  "Reset Password",
 
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight:
                     FontWeight.bold,
                     color:
@@ -199,40 +244,59 @@ class _ForgetPageState
                   ),
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 const Text(
 
-                  "Masukkan email akun kamu untuk menerima link reset password.",
+                  "Masukkan password baru untuk akun Anda.",
 
                   textAlign: TextAlign.center,
 
                   style: TextStyle(
                     color: Colors.grey,
-                    fontSize: 14,
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 30),
 
                 // =========================
-                // INPUT EMAIL
+                // PASSWORD BARU
                 // =========================
                 TextField(
 
                   controller:
-                  _emailController,
+                  _passwordController,
 
-                  keyboardType:
-                  TextInputType.emailAddress,
+                  obscureText:
+                  _obscurePassword,
 
                   decoration: InputDecoration(
 
-                    hintText: "Email Anda",
+                    hintText:
+                    "Password Baru",
 
-                    prefixIcon: const Icon(
-                      Icons.email_outlined,
-                      color: Colors.grey,
+                    prefixIcon:
+                    const Icon(
+                      Icons.lock_outline,
+                    ),
+
+                    suffixIcon:
+                    IconButton(
+
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+
+                      onPressed: () {
+
+                        setState(() {
+
+                          _obscurePassword =
+                          !_obscurePassword;
+                        });
+                      },
                     ),
 
                     border:
@@ -242,31 +306,70 @@ class _ForgetPageState
                       BorderRadius.circular(
                           10),
                     ),
+                  ),
+                ),
 
-                    enabledBorder:
+                const SizedBox(height: 20),
+
+                // =========================
+                // KONFIRMASI PASSWORD
+                // =========================
+                TextField(
+
+                  controller:
+                  _confirmPasswordController,
+
+                  obscureText:
+                  _obscureConfirmPassword,
+
+                  decoration: InputDecoration(
+
+                    hintText:
+                    "Konfirmasi Password",
+
+                    prefixIcon:
+                    const Icon(
+                      Icons.lock_outline,
+                    ),
+
+                    suffixIcon:
+                    IconButton(
+
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+
+                      onPressed: () {
+
+                        setState(() {
+
+                          _obscureConfirmPassword =
+                          !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
+
+                    border:
                     OutlineInputBorder(
 
                       borderRadius:
                       BorderRadius.circular(
                           10),
-
-                      borderSide: BorderSide(
-                        color:
-                        Colors.grey.shade300,
-                      ),
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 30),
 
                 // =========================
-                // BUTTON
+                // BUTTON RESET
                 // =========================
                 SizedBox(
 
                   width: double.infinity,
-                  height: 48,
+                  height: 50,
 
                   child: ElevatedButton(
 
@@ -309,7 +412,7 @@ class _ForgetPageState
                     )
                         : const Text(
 
-                      "Kirim Link Reset",
+                      "Reset Password",
 
                       style: TextStyle(
                         color:
@@ -318,27 +421,6 @@ class _ForgetPageState
                         fontWeight:
                         FontWeight.bold,
                       ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // =========================
-                // BACK LOGIN
-                // =========================
-                TextButton(
-
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-
-                  child: const Text(
-
-                    "Kembali ke Login",
-
-                    style: TextStyle(
-                      color: Colors.grey,
                     ),
                   ),
                 ),

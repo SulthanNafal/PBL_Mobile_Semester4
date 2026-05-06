@@ -1,38 +1,109 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // Import Supabase
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'routes/app_routes.dart';
 
 void main() async {
-  // 1. Pastikan binding sudah siap
+
+  // =========================
+  // INIT FLUTTER
+  // =========================
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Inisialisasi Supabase (Cuma SEKALI seumur hidup aplikasi)
+  // =========================
+  // INIT SUPABASE
+  // =========================
   await Supabase.initialize(
-    // GANTI URL ini dengan Project URL (bukan URL Dashboard)
-    url: 'https://bnhfjxxyxpwpwkmorlcg.supabase.co',
-    anonKey: 'sb_publishable_q5tTOYyPPiEXxmgNSekeiw_BzhOnQmk',
+
+    url:
+    'https://bnhfjxxyxpwpwkmorlcg.supabase.co',
+
+    anonKey:
+    'sb_publishable_q5tTOYyPPiEXxmgNSekeiw_BzhOnQmk',
   );
 
   runApp(const MyApp());
 }
 
-// 3. Buat variabel global supaya gampang dipanggil di file mana pun
-final supabase = Supabase.instance.client;
+// =========================
+// GLOBAL SUPABASE CLIENT
+// =========================
+final supabase =
+    Supabase.instance.client;
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() =>
+      _MyAppState();
+}
+
+class _MyAppState
+    extends State<MyApp> {
+
+  // navigator key
+  final GlobalKey<NavigatorState>
+  navigatorKey =
+  GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+
+    super.initState();
+
+    // =========================
+    // LISTENER RESET PASSWORD
+    // =========================
+    supabase.auth.onAuthStateChange.listen(
+
+          (data) {
+
+        final event = data.event;
+
+        // =========================
+        // DETEKSI RECOVERY PASSWORD
+        // =========================
+        if (event ==
+            AuthChangeEvent.passwordRecovery) {
+
+          navigatorKey.currentState
+              ?.pushNamed(
+            AppRoutes.resetPassword,
+          );
+        }
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
+
+      navigatorKey: navigatorKey,
+
+      debugShowCheckedModeBanner:
+      false,
+
       title: 'Ursa Event',
+
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFF24E4E)),
+
+        colorScheme:
+        ColorScheme.fromSeed(
+          seedColor:
+          const Color(0xFFF24E4E),
+        ),
+
         useMaterial3: true,
       ),
-      initialRoute: AppRoutes.login,
-      onGenerateRoute: AppRoutes.generateRoute,
+
+      initialRoute:
+      AppRoutes.login,
+
+      onGenerateRoute:
+      AppRoutes.generateRoute,
     );
   }
 }
