@@ -7,16 +7,22 @@ class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<LoginPage> createState() =>
+      _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
-  final AuthController authController = AuthController();
+class _LoginPageState
+    extends State<LoginPage> {
 
-  final TextEditingController _emailController =
+  final AuthController authController =
+  AuthController();
+
+  final TextEditingController
+  _emailController =
   TextEditingController();
 
-  final TextEditingController _passwordController =
+  final TextEditingController
+  _passwordController =
   TextEditingController();
 
   bool _isLoading = false;
@@ -26,9 +32,17 @@ class _LoginPageState extends State<LoginPage> {
   // LOGIN FUNCTION
   // =========================
   Future<void> _handleLogin() async {
+
+    // VALIDASI KOSONG
     if (_emailController.text.isEmpty ||
         _passwordController.text.isEmpty) {
-      _showMessage("Email dan Password wajib diisi!");
+
+      _showPopup(
+        title: "Peringatan",
+        message:
+        "Email dan Password wajib diisi!",
+      );
+
       return;
     }
 
@@ -37,24 +51,79 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final res = await authController.loginWithEmail(
+
+      final result =
+      await authController.loginWithEmail(
+
         _emailController.text.trim(),
+
         _passwordController.text.trim(),
       );
 
-      if (res.user != null) {
-        _showMessage("Login berhasil");
+      // =========================
+      // LOGIN SUCCESS
+      // =========================
+      if (result == "success") {
 
-        // pindah halaman setelah login
-        Navigator.pushReplacementNamed(
-          context,
-          AppRoutes.login,
+        if (!mounted) return;
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+
+          builder: (_) => AlertDialog(
+
+            title: const Text("Berhasil"),
+
+            content: const Text(
+              "Login berhasil.\nSelamat datang kembali.",
+            ),
+
+            actions: [
+
+              TextButton(
+
+                onPressed: () {
+
+                  Navigator.pop(context);
+
+                  Navigator.pushReplacementNamed(
+                    context,
+                    AppRoutes.login,
+                  );
+                },
+
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+
+      } else {
+
+        // =========================
+        // LOGIN FAILED
+        // =========================
+        _showPopup(
+          title: "Login Gagal",
+          message:
+          result ??
+              "Terjadi kesalahan saat login",
         );
       }
+
     } catch (e) {
-      _showMessage("Login gagal: $e");
+
+      _showPopup(
+        title: "Error",
+        message:
+        "Terjadi kesalahan sistem",
+      );
+
     } finally {
+
       if (mounted) {
+
         setState(() {
           _isLoading = false;
         });
@@ -63,42 +132,95 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   // =========================
-  // SNACKBAR
+  // POPUP FUNCTION
   // =========================
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+  void _showPopup({
+
+    required String title,
+    required String message,
+
+  }) {
+
+    showDialog(
+      context: context,
+
+      builder: (_) => AlertDialog(
+
+        title: Text(title),
+
         content: Text(message),
+
+        actions: [
+
+          TextButton(
+
+            onPressed: () =>
+                Navigator.pop(context),
+
+            child: const Text("OK"),
+          ),
+        ],
       ),
     );
   }
 
   @override
+  void dispose() {
+
+    _emailController.dispose();
+
+    _passwordController.dispose();
+
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF24E4E),
+      backgroundColor:
+      const Color(0xFFF24E4E),
 
       body: Center(
+
         child: SingleChildScrollView(
+
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            padding: const EdgeInsets.all(24),
+
+            margin:
+            const EdgeInsets.symmetric(
+              horizontal: 24,
+            ),
+
+            padding:
+            const EdgeInsets.all(24),
 
             decoration: BoxDecoration(
+
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+
+              borderRadius:
+              BorderRadius.circular(20),
 
               boxShadow: [
+
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color:
+                  Colors.black.withOpacity(
+                      0.1),
+
                   blurRadius: 10,
-                  offset: const Offset(0, 5),
+
+                  offset:
+                  const Offset(0, 5),
                 ),
               ],
             ),
 
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize:
+              MainAxisSize.min,
+
               children: [
 
                 // =========================
@@ -113,6 +235,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const Text(
                   "Selamat Datang di",
+
                   style: TextStyle(
                     color: Colors.grey,
                   ),
@@ -120,10 +243,15 @@ class _LoginPageState extends State<LoginPage> {
 
                 const Text(
                   "URSAEVENT",
+
                   style: TextStyle(
-                    color: Color(0xFFC62828),
+                    color:
+                    Color(0xFFC62828),
+
                     fontSize: 26,
-                    fontWeight: FontWeight.bold,
+
+                    fontWeight:
+                    FontWeight.bold,
                   ),
                 ),
 
@@ -133,14 +261,47 @@ class _LoginPageState extends State<LoginPage> {
                 // EMAIL
                 // =========================
                 TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
+
+                  controller:
+                  _emailController,
+
+                  keyboardType:
+                  TextInputType.emailAddress,
 
                   decoration: InputDecoration(
+
                     hintText: "Email",
 
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    prefixIcon: const Icon(
+                      Icons.email_outlined,
+                      color: Colors.grey,
+                    ),
+
+                    contentPadding:
+                    const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+
+                    border:
+                    OutlineInputBorder(
+
+                      borderRadius:
+                      BorderRadius.circular(
+                          10),
+                    ),
+
+                    enabledBorder:
+                    OutlineInputBorder(
+
+                      borderRadius:
+                      BorderRadius.circular(
+                          10),
+
+                      borderSide: BorderSide(
+                        color:
+                        Colors.grey.shade300,
+                      ),
                     ),
                   ),
                 ),
@@ -151,29 +312,70 @@ class _LoginPageState extends State<LoginPage> {
                 // PASSWORD
                 // =========================
                 TextField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
+
+                  controller:
+                  _passwordController,
+
+                  obscureText:
+                  _obscurePassword,
 
                   decoration: InputDecoration(
+
                     hintText: "Password",
 
+                    prefixIcon: const Icon(
+                      Icons.lock_outline,
+                      color: Colors.grey,
+                    ),
+
                     suffixIcon: IconButton(
+
                       icon: Icon(
+
                         _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                            ? Icons
+                            .visibility_off_outlined
+                            : Icons
+                            .visibility_outlined,
+
+                        color: Colors.grey,
                       ),
 
                       onPressed: () {
+
                         setState(() {
+
                           _obscurePassword =
                           !_obscurePassword;
                         });
                       },
                     ),
 
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                    contentPadding:
+                    const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+
+                    border:
+                    OutlineInputBorder(
+
+                      borderRadius:
+                      BorderRadius.circular(
+                          10),
+                    ),
+
+                    enabledBorder:
+                    OutlineInputBorder(
+
+                      borderRadius:
+                      BorderRadius.circular(
+                          10),
+
+                      borderSide: BorderSide(
+                        color:
+                        Colors.grey.shade300,
+                      ),
                     ),
                   ),
                 ),
@@ -182,10 +384,14 @@ class _LoginPageState extends State<LoginPage> {
                 // FORGOT PASSWORD
                 // =========================
                 Align(
-                  alignment: Alignment.centerRight,
+
+                  alignment:
+                  Alignment.centerRight,
 
                   child: TextButton(
+
                     onPressed: () {
+
                       Navigator.pushNamed(
                         context,
                         AppRoutes.forgotPassword,
@@ -204,26 +410,60 @@ class _LoginPageState extends State<LoginPage> {
                 // LOGIN BUTTON
                 // =========================
                 SizedBox(
+
                   width: double.infinity,
                   height: 50,
 
                   child: ElevatedButton(
-                    onPressed:
-                    _isLoading ? null : _handleLogin,
 
-                    style: ElevatedButton.styleFrom(
+                    onPressed:
+                    _isLoading
+                        ? null
+                        : _handleLogin,
+
+                    style:
+                    ElevatedButton.styleFrom(
+
                       backgroundColor:
-                      const Color(0xFFD32F2F),
+                      const Color(
+                          0xFFD32F2F),
+
+                      foregroundColor:
+                      Colors.white,
+
+                      shape:
+                      RoundedRectangleBorder(
+
+                        borderRadius:
+                        BorderRadius.circular(
+                            10),
+                      ),
                     ),
 
-                    child: _isLoading
-                        ? const CircularProgressIndicator(
-                      color: Colors.white,
+                    child:
+                    _isLoading
+                        ? const SizedBox(
+
+                      width: 20,
+                      height: 20,
+
+                      child:
+                      CircularProgressIndicator(
+
+                        color:
+                        Colors.white,
+
+                        strokeWidth: 2,
+                      ),
                     )
                         : const Text(
+
                       "Login",
+
                       style: TextStyle(
                         fontSize: 16,
+                        fontWeight:
+                        FontWeight.bold,
                       ),
                     ),
                   ),
@@ -235,24 +475,42 @@ class _LoginPageState extends State<LoginPage> {
                 // GOOGLE LOGIN
                 // =========================
                 SizedBox(
+
                   width: double.infinity,
                   height: 50,
 
                   child: OutlinedButton(
+
                     onPressed: () async {
+
                       try {
+
                         await authController
                             .loginWithGoogle();
 
-                        _showMessage(
-                          "Login Google berhasil",
-                        );
                       } catch (e) {
-                        _showMessage(
-                          "Google login gagal: $e",
+
+                        _showPopup(
+                          title:
+                          "Google Login Gagal",
+
+                          message:
+                          "Terjadi kesalahan saat login dengan Google",
                         );
                       }
                     },
+
+                    style:
+                    OutlinedButton.styleFrom(
+
+                      shape:
+                      RoundedRectangleBorder(
+
+                        borderRadius:
+                        BorderRadius.circular(
+                            10),
+                      ),
+                    ),
 
                     child: const Text(
                       "Login dengan Google",
@@ -266,16 +524,20 @@ class _LoginPageState extends State<LoginPage> {
                 // REGISTER
                 // =========================
                 Row(
+
                   mainAxisAlignment:
                   MainAxisAlignment.center,
 
                   children: [
+
                     const Text(
                       "Belum punya akun?",
                     ),
 
                     TextButton(
+
                       onPressed: () {
+
                         Navigator.pushNamed(
                           context,
                           AppRoutes.register,

@@ -8,7 +8,7 @@ class AuthController {
   final supabase = Supabase.instance.client;
 
   // ==============================
-  // 🔐 NORMALIZE PASSWORD
+  // 🔐 HASH CUSTOM
   // ==============================
   String normalizePassword(
       String password,
@@ -25,9 +25,7 @@ class AuthController {
   Future<String?> register({
 
     required String username,
-
     required String email,
-
     required String password,
 
   }) async {
@@ -53,8 +51,7 @@ class AuthController {
 
       if (existingUsername != null) {
 
-        return
-          "Username sudah pernah terpakai";
+        return "Username sudah digunakan";
       }
 
       // ==============================
@@ -73,8 +70,7 @@ class AuthController {
 
       if (existingEmail != null) {
 
-        return
-          "Email sudah pernah terpakai";
+        return "Email sudah digunakan";
       }
 
       // ==============================
@@ -85,7 +81,7 @@ class AuthController {
 
         email: email.trim(),
 
-        password: hashed,
+        password: password.trim(),
 
         emailRedirectTo:
         'com.ursaevent.app://login-callback/',
@@ -95,12 +91,11 @@ class AuthController {
 
       if (user == null) {
 
-        return
-          "Gagal membuat user";
+        return "Gagal membuat akun";
       }
 
       // ==============================
-      // INSERT TABLE USERS
+      // INSERT USERS TABLE
       // ==============================
       await supabase
           .schema('ursaevent')
@@ -130,47 +125,98 @@ class AuthController {
 
     } on AuthException catch (e) {
 
-      return e.message;
+      // EMAIL SUDAH TERDAFTAR
+      if (e.message
+          .toLowerCase()
+          .contains('already registered')) {
+
+        return "Email sudah digunakan";
+      }
+
+      return "Registrasi gagal";
 
     } catch (e) {
 
-      return "Error: $e";
+      return "Terjadi kesalahan sistem";
     }
   }
 
   // ==============================
   // 🔑 LOGIN EMAIL
   // ==============================
-  Future<AuthResponse>
-  loginWithEmail(
+  Future<String?> loginWithEmail(
+
       String email,
       String password,
-      ) async {
 
-    final hashed =
-    normalizePassword(password);
-
-    return await supabase.auth
-        .signInWithPassword(
-
-      email: email.trim(),
-
-      password: hashed,
-    );
-  }
-
-  // ==============================
-  // 📩 SEND RESET PASSWORD EMAIL
-  // ==============================
-  Future<String?> sendResetPasswordEmail(
-      String email,
       ) async {
 
     try {
 
+      await supabase.auth
+          .signInWithPassword(
+
+        email: email.trim(),
+
+        password: password.trim(),
+      );
+
+      return "success";
+
+    } on AuthException catch (e) {
+
+      final error =
+      e.message.toLowerCase();
+
       // ==============================
-      // CEK EMAIL ADA / TIDAK
+      // INVALID LOGIN
       // ==============================
+      if (error.contains(
+          'invalid login credentials')) {
+
+        return
+          "Email atau sandi Anda salah.\nSilakan coba kembali.";
+      }
+
+      // ==============================
+      // EMAIL BELUM VERIFIKASI
+      // ==============================
+      if (error.contains(
+          'email not confirmed')) {
+
+        return
+          "Email belum diverifikasi.\nSilakan cek email Anda.";
+      }
+
+      // ==============================
+      // TOO MANY REQUEST
+      // ==============================
+      if (error.contains(
+          'too many requests')) {
+
+        return
+          "Terlalu banyak percobaan login.\nSilakan coba lagi nanti.";
+      }
+
+      return "Login gagal";
+
+    } catch (e) {
+
+      return "Terjadi kesalahan sistem";
+    }
+  }
+
+  // ==============================
+  // 📩 RESET PASSWORD EMAIL
+  // ==============================
+  Future<String?> sendResetPasswordEmail(
+
+      String email,
+
+      ) async {
+
+    try {
+
       final userData =
       await supabase
           .schema('ursaevent')
@@ -189,7 +235,7 @@ class AuthController {
       }
 
       // ==============================
-      // KIRIM EMAIL RESET PASSWORD
+      // SEND RESET EMAIL
       // ==============================
       await supabase.auth
           .resetPasswordForEmail(
@@ -204,16 +250,28 @@ class AuthController {
 
     } on AuthException catch (e) {
 
-      return e.message;
+      final error =
+      e.message.toLowerCase();
+
+      if (error.contains(
+          'email rate limit exceeded')) {
+
+        return
+          "Terlalu banyak permintaan.\nSilakan coba lagi nanti.";
+      }
+
+      return
+        "Gagal mengirim link reset password";
 
     } catch (e) {
 
-      return "Error: $e";
+      return
+        "Terjadi kesalahan sistem";
     }
   }
 
   // ==============================
-  // 🔑 UPDATE PASSWORD BARU
+  // 🔑 UPDATE PASSWORD
   // ==============================
   Future<String?> updatePassword({
 
@@ -225,10 +283,11 @@ class AuthController {
 
       final hashed =
       normalizePassword(
-          newPassword);
+        newPassword,
+      );
 
       // ==============================
-      // AMBIL USER SESSION SEKARANG
+      // SESSION USER
       // ==============================
       final user =
           supabase.auth.currentUser;
@@ -236,28 +295,30 @@ class AuthController {
       if (user == null) {
 
         return
-          "Session reset password tidak ditemukan";
+          "Session user tidak ditemukan";
       }
 
       // ==============================
-      // UPDATE PASSWORD AUTH
+      // UPDATE AUTH PASSWORD
       // ==============================
       await supabase.auth.updateUser(
 
         UserAttributes(
-          password: hashed,
+          password:
+          newPassword.trim(),
         ),
       );
 
       // ==============================
-      // UPDATE PASSWORD TABLE USERS
+      // UPDATE USERS TABLE
       // ==============================
       await supabase
           .schema('ursaevent')
           .from('users')
           .update({
 
-        'password': hashed,
+        'password':
+        hashed,
 
       }).eq(
         'id',
@@ -268,11 +329,23 @@ class AuthController {
 
     } on AuthException catch (e) {
 
-      return e.message;
+      final error =
+      e.message.toLowerCase();
+
+      if (error.contains(
+          'same password')) {
+
+        return
+          "Password baru tidak boleh sama";
+      }
+
+      return
+        "Gagal mengubah password";
 
     } catch (e) {
 
-      return "Error: $e";
+      return
+        "Terjadi kesalahan sistem";
     }
   }
 

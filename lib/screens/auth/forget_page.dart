@@ -27,7 +27,9 @@ class _ForgetPageState
     // VALIDASI EMAIL KOSONG
     if (_emailController.text.isEmpty) {
 
-      _showMsg(
+      _showPopup(
+        title: "Peringatan",
+        message:
         "Masukkan email terlebih dahulu",
       );
 
@@ -56,8 +58,10 @@ class _ForgetPageState
       // EMAIL TIDAK DITEMUKAN
       if (userData == null) {
 
-        _showMsg(
-          "Email tidak ditemukan",
+        _showPopup(
+          title: "Email Tidak Ditemukan",
+          message:
+          "Email tidak terdaftar pada sistem",
         );
 
         return;
@@ -75,17 +79,53 @@ class _ForgetPageState
         'com.ursaevent.app://reset-password/',
       );
 
-      _showMsg(
-        "Link reset password berhasil dikirim ke email",
+      // =========================
+      // SUCCESS POPUP
+      // =========================
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+
+        builder: (_) => AlertDialog(
+
+          title: const Text("Berhasil"),
+
+          content: const Text(
+            "Link reset password berhasil dikirim.\nSilakan cek email Anda.",
+          ),
+
+          actions: [
+
+            TextButton(
+
+              onPressed: () {
+
+                Navigator.pop(context);
+
+                // KEMBALI KE LOGIN
+                Navigator.pop(context);
+              },
+
+              child: const Text("OK"),
+            ),
+          ],
+        ),
       );
 
     } on AuthException catch (e) {
 
-      _showMsg(e.message);
+      _showPopup(
+        title: "Reset Password Gagal",
+        message: e.message,
+      );
 
     } catch (e) {
 
-      _showMsg(
+      _showPopup(
+        title: "Error",
+        message:
         "Terjadi kesalahan sistem",
       );
 
@@ -101,15 +141,31 @@ class _ForgetPageState
   }
 
   // =========================
-  // SNACKBAR
+  // POPUP FUNCTION
   // =========================
-  void _showMsg(String msg) {
+  void _showPopup({
+    required String title,
+    required String message,
+  }) {
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
+    showDialog(
+      context: context,
 
-      SnackBar(
-        content: Text(msg),
+      builder: (_) => AlertDialog(
+
+        title: Text(title),
+
+        content: Text(message),
+
+        actions: [
+
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(context),
+
+            child: const Text("OK"),
+          ),
+        ],
       ),
     );
   }
@@ -165,6 +221,15 @@ class _ForgetPageState
 
               borderRadius:
               BorderRadius.circular(20),
+
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(
+                      0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
 
             child: Column(
@@ -235,6 +300,12 @@ class _ForgetPageState
                       color: Colors.grey,
                     ),
 
+                    contentPadding:
+                    const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+
                     border:
                     OutlineInputBorder(
 
@@ -282,6 +353,9 @@ class _ForgetPageState
                       const Color(
                           0xFFD32F2F),
 
+                      foregroundColor:
+                      Colors.white,
+
                       shape:
                       RoundedRectangleBorder(
 
@@ -312,11 +386,9 @@ class _ForgetPageState
                       "Kirim Link Reset",
 
                       style: TextStyle(
-                        color:
-                        Colors.white,
-
                         fontWeight:
                         FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
                   ),
