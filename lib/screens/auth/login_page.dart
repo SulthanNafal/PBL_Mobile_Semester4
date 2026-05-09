@@ -7,22 +7,17 @@ class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() =>
-      _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState
-    extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage> {
 
-  final AuthController authController =
-  AuthController();
+  final AuthController authController = AuthController();
 
-  final TextEditingController
-  _emailController =
+  final TextEditingController _usernameController =
   TextEditingController();
 
-  final TextEditingController
-  _passwordController =
+  final TextEditingController _passwordController =
   TextEditingController();
 
   bool _isLoading = false;
@@ -33,14 +28,13 @@ class _LoginPageState
   // =========================
   Future<void> _handleLogin() async {
 
-    // VALIDASI KOSONG
-    if (_emailController.text.isEmpty ||
+    // VALIDASI
+    if (_usernameController.text.isEmpty ||
         _passwordController.text.isEmpty) {
 
       _showPopup(
         title: "Peringatan",
-        message:
-        "Email dan Password wajib diisi!",
+        message: "Username dan Password wajib diisi!",
       );
 
       return;
@@ -52,10 +46,9 @@ class _LoginPageState
 
     try {
 
-      final result =
-      await authController.loginWithEmail(
+      final result = await authController.loginWithEmail(
 
-        _emailController.text.trim(),
+        _usernameController.text.trim(),
 
         _passwordController.text.trim(),
       );
@@ -63,7 +56,34 @@ class _LoginPageState
       // =========================
       // LOGIN SUCCESS
       // =========================
-      if (result == "success") {
+      if (result != null && result is Map) {
+
+        String level = result['level'];
+
+        String route = AppRoutes.user;
+
+        switch (level) {
+
+          case 'superadmin':
+            route = AppRoutes.superadmin;
+            break;
+
+          case 'admin':
+            route = AppRoutes.admin;
+            break;
+
+          case 'crew':
+            route = AppRoutes.crew;
+            break;
+
+          case 'finance':
+            route = AppRoutes.finance;
+            break;
+
+          case 'user':
+            route = AppRoutes.user;
+            break;
+        }
 
         if (!mounted) return;
 
@@ -75,8 +95,8 @@ class _LoginPageState
 
             title: const Text("Berhasil"),
 
-            content: const Text(
-              "Login berhasil.\nSelamat datang kembali.",
+            content: Text(
+              "Login berhasil sebagai $level",
             ),
 
             actions: [
@@ -89,7 +109,7 @@ class _LoginPageState
 
                   Navigator.pushReplacementNamed(
                     context,
-                    AppRoutes.login,
+                    route,
                   );
                 },
 
@@ -106,9 +126,7 @@ class _LoginPageState
         // =========================
         _showPopup(
           title: "Login Gagal",
-          message:
-          result ??
-              "Terjadi kesalahan saat login",
+          message: result.toString(),
         );
       }
 
@@ -116,8 +134,7 @@ class _LoginPageState
 
       _showPopup(
         title: "Error",
-        message:
-        "Terjadi kesalahan sistem",
+        message: "Terjadi kesalahan sistem\n$e",
       );
 
     } finally {
@@ -132,7 +149,7 @@ class _LoginPageState
   }
 
   // =========================
-  // POPUP FUNCTION
+  // POPUP
   // =========================
   void _showPopup({
 
@@ -167,7 +184,7 @@ class _LoginPageState
   @override
   void dispose() {
 
-    _emailController.dispose();
+    _usernameController.dispose();
 
     _passwordController.dispose();
 
@@ -178,8 +195,8 @@ class _LoginPageState
   Widget build(BuildContext context) {
 
     return Scaffold(
-      backgroundColor:
-      const Color(0xFFF24E4E),
+
+      backgroundColor: const Color(0xFFF24E4E),
 
       body: Center(
 
@@ -187,13 +204,11 @@ class _LoginPageState
 
           child: Container(
 
-            margin:
-            const EdgeInsets.symmetric(
+            margin: const EdgeInsets.symmetric(
               horizontal: 24,
             ),
 
-            padding:
-            const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
 
             decoration: BoxDecoration(
 
@@ -206,20 +221,18 @@ class _LoginPageState
 
                 BoxShadow(
                   color:
-                  Colors.black.withOpacity(
-                      0.1),
+                  Colors.black.withOpacity(0.1),
 
                   blurRadius: 10,
 
-                  offset:
-                  const Offset(0, 5),
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
 
             child: Column(
-              mainAxisSize:
-              MainAxisSize.min,
+
+              mainAxisSize: MainAxisSize.min,
 
               children: [
 
@@ -235,45 +248,37 @@ class _LoginPageState
 
                 const Text(
                   "Selamat Datang di",
-
                   style: TextStyle(
                     color: Colors.grey,
                   ),
                 ),
 
                 const Text(
+
                   "URSAEVENT",
 
                   style: TextStyle(
-                    color:
-                    Color(0xFFC62828),
-
+                    color: Color(0xFFC62828),
                     fontSize: 26,
-
-                    fontWeight:
-                    FontWeight.bold,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
 
                 const SizedBox(height: 32),
 
                 // =========================
-                // EMAIL
+                // USERNAME
                 // =========================
                 TextField(
 
-                  controller:
-                  _emailController,
-
-                  keyboardType:
-                  TextInputType.emailAddress,
+                  controller: _usernameController,
 
                   decoration: InputDecoration(
 
-                    hintText: "Email",
+                    hintText: "Username",
 
                     prefixIcon: const Icon(
-                      Icons.email_outlined,
+                      Icons.person_outline,
                       color: Colors.grey,
                     ),
 
@@ -283,24 +288,20 @@ class _LoginPageState
                       vertical: 12,
                     ),
 
-                    border:
-                    OutlineInputBorder(
+                    border: OutlineInputBorder(
 
                       borderRadius:
-                      BorderRadius.circular(
-                          10),
+                      BorderRadius.circular(10),
                     ),
 
                     enabledBorder:
                     OutlineInputBorder(
 
                       borderRadius:
-                      BorderRadius.circular(
-                          10),
+                      BorderRadius.circular(10),
 
                       borderSide: BorderSide(
-                        color:
-                        Colors.grey.shade300,
+                        color: Colors.grey.shade300,
                       ),
                     ),
                   ),
@@ -313,11 +314,9 @@ class _LoginPageState
                 // =========================
                 TextField(
 
-                  controller:
-                  _passwordController,
+                  controller: _passwordController,
 
-                  obscureText:
-                  _obscurePassword,
+                  obscureText: _obscurePassword,
 
                   decoration: InputDecoration(
 
@@ -333,10 +332,8 @@ class _LoginPageState
                       icon: Icon(
 
                         _obscurePassword
-                            ? Icons
-                            .visibility_off_outlined
-                            : Icons
-                            .visibility_outlined,
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
 
                         color: Colors.grey,
                       ),
@@ -357,24 +354,20 @@ class _LoginPageState
                       vertical: 12,
                     ),
 
-                    border:
-                    OutlineInputBorder(
+                    border: OutlineInputBorder(
 
                       borderRadius:
-                      BorderRadius.circular(
-                          10),
+                      BorderRadius.circular(10),
                     ),
 
                     enabledBorder:
                     OutlineInputBorder(
 
                       borderRadius:
-                      BorderRadius.circular(
-                          10),
+                      BorderRadius.circular(10),
 
                       borderSide: BorderSide(
-                        color:
-                        Colors.grey.shade300,
+                        color: Colors.grey.shade300,
                       ),
                     ),
                   ),
@@ -385,8 +378,7 @@ class _LoginPageState
                 // =========================
                 Align(
 
-                  alignment:
-                  Alignment.centerRight,
+                  alignment: Alignment.centerRight,
 
                   child: TextButton(
 
@@ -425,8 +417,7 @@ class _LoginPageState
                     ElevatedButton.styleFrom(
 
                       backgroundColor:
-                      const Color(
-                          0xFFD32F2F),
+                      const Color(0xFFD32F2F),
 
                       foregroundColor:
                       Colors.white,
@@ -435,8 +426,7 @@ class _LoginPageState
                       RoundedRectangleBorder(
 
                         borderRadius:
-                        BorderRadius.circular(
-                            10),
+                        BorderRadius.circular(10),
                       ),
                     ),
 
@@ -450,9 +440,7 @@ class _LoginPageState
                       child:
                       CircularProgressIndicator(
 
-                        color:
-                        Colors.white,
-
+                        color: Colors.white,
                         strokeWidth: 2,
                       ),
                     )
@@ -507,8 +495,7 @@ class _LoginPageState
                       RoundedRectangleBorder(
 
                         borderRadius:
-                        BorderRadius.circular(
-                            10),
+                        BorderRadius.circular(10),
                       ),
                     ),
 

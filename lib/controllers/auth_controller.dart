@@ -125,10 +125,11 @@ class AuthController {
 
     } on AuthException catch (e) {
 
-      // EMAIL SUDAH TERDAFTAR
-      if (e.message
-          .toLowerCase()
-          .contains('already registered')) {
+      final error =
+      e.message.toLowerCase();
+
+      if (error.contains(
+          'already registered')) {
 
         return "Email sudah digunakan";
       }
@@ -142,26 +143,74 @@ class AuthController {
   }
 
   // ==============================
-  // 🔑 LOGIN EMAIL
+  // 🔑 LOGIN USERNAME
   // ==============================
-  Future<String?> loginWithEmail(
+  Future<dynamic> loginWithEmail(
 
-      String email,
+      String username,
       String password,
 
       ) async {
 
     try {
 
+      // ==============================
+      // HASH PASSWORD INPUT
+      // ==============================
+      final hashedPassword =
+      normalizePassword(password);
+
+      // ==============================
+      // CEK USER DI TABLE USERS
+      // ==============================
+      final userData =
+      await supabase
+          .schema('ursaevent')
+          .from('users')
+          .select()
+          .eq(
+        'username',
+        username.trim(),
+      )
+          .eq(
+        'password',
+        hashedPassword,
+      )
+          .maybeSingle();
+
+      // ==============================
+      // USER TIDAK DITEMUKAN
+      // ==============================
+      if (userData == null) {
+
+        return
+          "Username atau Password salah";
+      }
+
+      // ==============================
+      // LOGIN AUTH SUPABASE
+      // ==============================
       await supabase.auth
           .signInWithPassword(
 
-        email: email.trim(),
+        email: userData['email'],
 
         password: password.trim(),
       );
 
-      return "success";
+      // ==============================
+      // RETURN DATA USER
+      // ==============================
+      return {
+
+        'status': 'success',
+
+        'level':
+        userData['level'],
+
+        'user':
+        userData,
+      };
 
     } on AuthException catch (e) {
 
@@ -175,7 +224,7 @@ class AuthController {
           'invalid login credentials')) {
 
         return
-          "Email atau sandi Anda salah.\nSilakan coba kembali.";
+          "Email atau Password salah";
       }
 
       // ==============================
@@ -185,7 +234,7 @@ class AuthController {
           'email not confirmed')) {
 
         return
-          "Email belum diverifikasi.\nSilakan cek email Anda.";
+          "Email belum diverifikasi";
       }
 
       // ==============================
@@ -195,14 +244,15 @@ class AuthController {
           'too many requests')) {
 
         return
-          "Terlalu banyak percobaan login.\nSilakan coba lagi nanti.";
+          "Terlalu banyak percobaan login";
       }
 
       return "Login gagal";
 
     } catch (e) {
 
-      return "Terjadi kesalahan sistem";
+      return
+        "Terjadi kesalahan sistem\n$e";
     }
   }
 
@@ -257,7 +307,7 @@ class AuthController {
           'email rate limit exceeded')) {
 
         return
-          "Terlalu banyak permintaan.\nSilakan coba lagi nanti.";
+          "Terlalu banyak permintaan";
       }
 
       return
