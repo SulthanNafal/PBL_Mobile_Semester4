@@ -143,11 +143,11 @@ class AuthController {
   }
 
   // ==============================
-  // 🔑 LOGIN USERNAME
+  // 🔑 LOGIN USERNAME / EMAIL
   // ==============================
   Future<dynamic> loginWithEmail(
 
-      String username,
+      String loginInput,
       String password,
 
       ) async {
@@ -155,28 +155,59 @@ class AuthController {
     try {
 
       // ==============================
-      // HASH PASSWORD INPUT
+      // HASH PASSWORD CUSTOM
       // ==============================
       final hashedPassword =
       normalizePassword(password);
 
       // ==============================
-      // CEK USER DI TABLE USERS
+      // DETEKSI EMAIL / USERNAME
       // ==============================
-      final userData =
-      await supabase
-          .schema('ursaevent')
-          .from('users')
-          .select()
-          .eq(
-        'username',
-        username.trim(),
-      )
-          .eq(
-        'password',
-        hashedPassword,
-      )
-          .maybeSingle();
+      final isEmail =
+      loginInput.contains('@');
+
+      dynamic userData;
+
+      // ==============================
+      // LOGIN VIA EMAIL
+      // ==============================
+      if (isEmail) {
+
+        userData =
+        await supabase
+            .schema('ursaevent')
+            .from('users')
+            .select()
+            .eq(
+          'email',
+          loginInput.trim(),
+        )
+            .eq(
+          'password',
+          hashedPassword,
+        )
+            .maybeSingle();
+
+      } else {
+
+        // ==============================
+        // LOGIN VIA USERNAME
+        // ==============================
+        userData =
+        await supabase
+            .schema('ursaevent')
+            .from('users')
+            .select()
+            .eq(
+          'username',
+          loginInput.trim(),
+        )
+            .eq(
+          'password',
+          hashedPassword,
+        )
+            .maybeSingle();
+      }
 
       // ==============================
       // USER TIDAK DITEMUKAN
@@ -184,11 +215,11 @@ class AuthController {
       if (userData == null) {
 
         return
-          "Username atau Password salah";
+          "Username/Email atau Password salah";
       }
 
       // ==============================
-      // LOGIN AUTH SUPABASE
+      // LOGIN SUPABASE AUTH
       // ==============================
       await supabase.auth
           .signInWithPassword(
@@ -199,7 +230,7 @@ class AuthController {
       );
 
       // ==============================
-      // RETURN DATA USER
+      // RETURN USER DATA
       // ==============================
       return {
 
@@ -224,7 +255,7 @@ class AuthController {
           'invalid login credentials')) {
 
         return
-          "Email atau Password salah";
+          "Username/Email atau Password salah";
       }
 
       // ==============================
