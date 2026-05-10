@@ -2,7 +2,7 @@
     <application
         android:label="ursaevent"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@drawable/icon">
 
         <activity
             android:name=".MainActivity"

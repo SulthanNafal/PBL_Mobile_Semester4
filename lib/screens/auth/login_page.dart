@@ -11,14 +11,9 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-
   final AuthController authController = AuthController();
-
-  final TextEditingController _usernameController =
-  TextEditingController();
-
-  final TextEditingController _passwordController =
-  TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -27,16 +22,11 @@ class _LoginPageState extends State<LoginPage> {
   // LOGIN FUNCTION
   // =========================
   Future<void> _handleLogin() async {
-
-    // VALIDASI
-    if (_usernameController.text.isEmpty ||
-        _passwordController.text.isEmpty) {
-
+    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
       _showPopup(
         title: "Peringatan",
-        message: "Username dan Password wajib diisi!",
+        message: "Username/Email dan Password wajib diisi!",
       );
-
       return;
     }
 
@@ -45,11 +35,8 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-
       final result = await authController.loginWithEmail(
-
         _usernameController.text.trim(),
-
         _passwordController.text.trim(),
       );
 
@@ -57,29 +44,22 @@ class _LoginPageState extends State<LoginPage> {
       // LOGIN SUCCESS
       // =========================
       if (result != null && result is Map) {
-
         String level = result['level'];
-
         String route = AppRoutes.user;
 
         switch (level) {
-
           case 'superadmin':
             route = AppRoutes.superadmin;
             break;
-
           case 'admin':
             route = AppRoutes.admin;
             break;
-
           case 'crew':
             route = AppRoutes.crew;
             break;
-
           case 'finance':
             route = AppRoutes.finance;
             break;
-
           case 'user':
             route = AppRoutes.user;
             break;
@@ -90,37 +70,21 @@ class _LoginPageState extends State<LoginPage> {
         showDialog(
           context: context,
           barrierDismissible: false,
-
           builder: (_) => AlertDialog(
-
             title: const Text("Berhasil"),
-
-            content: Text(
-              "Login berhasil sebagai $level",
-            ),
-
+            content: Text("Login berhasil sebagai $level"),
             actions: [
-
               TextButton(
-
                 onPressed: () {
-
                   Navigator.pop(context);
-
-                  Navigator.pushReplacementNamed(
-                    context,
-                    route,
-                  );
+                  Navigator.pushReplacementNamed(context, route);
                 },
-
                 child: const Text("OK"),
               ),
             ],
           ),
         );
-
       } else {
-
         // =========================
         // LOGIN FAILED
         // =========================
@@ -129,18 +93,13 @@ class _LoginPageState extends State<LoginPage> {
           message: result.toString(),
         );
       }
-
     } catch (e) {
-
       _showPopup(
         title: "Error",
         message: "Terjadi kesalahan sistem\n$e",
       );
-
     } finally {
-
       if (mounted) {
-
         setState(() {
           _isLoading = false;
         });
@@ -151,29 +110,15 @@ class _LoginPageState extends State<LoginPage> {
   // =========================
   // POPUP
   // =========================
-  void _showPopup({
-
-    required String title,
-    required String message,
-
-  }) {
-
+  void _showPopup({required String title, required String message}) {
     showDialog(
       context: context,
-
       builder: (_) => AlertDialog(
-
         title: Text(title),
-
         content: Text(message),
-
         actions: [
-
           TextButton(
-
-            onPressed: () =>
-                Navigator.pop(context),
-
+            onPressed: () => Navigator.pop(context),
             child: const Text("OK"),
           ),
         ],
@@ -183,57 +128,33 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-
     _usernameController.dispose();
-
     _passwordController.dispose();
-
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
       backgroundColor: const Color(0xFFF24E4E),
-
       body: Center(
-
         child: SingleChildScrollView(
-
           child: Container(
-
-            margin: const EdgeInsets.symmetric(
-              horizontal: 24,
-            ),
-
+            margin: const EdgeInsets.symmetric(horizontal: 24),
             padding: const EdgeInsets.all(24),
-
             decoration: BoxDecoration(
-
               color: Colors.white,
-
-              borderRadius:
-              BorderRadius.circular(20),
-
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
-
                 BoxShadow(
-                  color:
-                  Colors.black.withOpacity(0.1),
-
+                  color: Colors.black.withOpacity(0.1),
                   blurRadius: 10,
-
                   offset: const Offset(0, 5),
                 ),
               ],
             ),
-
             child: Column(
-
               mainAxisSize: MainAxisSize.min,
-
               children: [
 
                 // =========================
@@ -248,15 +169,11 @@ class _LoginPageState extends State<LoginPage> {
 
                 const Text(
                   "Selamat Datang di",
-                  style: TextStyle(
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(color: Colors.grey),
                 ),
 
                 const Text(
-
                   "URSAEVENT",
-
                   style: TextStyle(
                     color: Color(0xFFC62828),
                     fontSize: 26,
@@ -267,42 +184,27 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 32),
 
                 // =========================
-                // USERNAME
+                // USERNAME / EMAIL
                 // =========================
                 TextField(
-
                   controller: _usernameController,
-
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-
-                    hintText: "Username",
-
+                    hintText: "Username / Email",
                     prefixIcon: const Icon(
                       Icons.person_outline,
                       color: Colors.grey,
                     ),
-
-                    contentPadding:
-                    const EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
                     ),
-
                     border: OutlineInputBorder(
-
-                      borderRadius:
-                      BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-
-                    enabledBorder:
-                    OutlineInputBorder(
-
-                      borderRadius:
-                      BorderRadius.circular(10),
-
-                      borderSide: BorderSide(
-                        color: Colors.grey.shade300,
-                      ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
                   ),
                 ),
@@ -313,62 +215,37 @@ class _LoginPageState extends State<LoginPage> {
                 // PASSWORD
                 // =========================
                 TextField(
-
                   controller: _passwordController,
-
                   obscureText: _obscurePassword,
-
                   decoration: InputDecoration(
-
                     hintText: "Password",
-
                     prefixIcon: const Icon(
                       Icons.lock_outline,
                       color: Colors.grey,
                     ),
-
                     suffixIcon: IconButton(
-
                       icon: Icon(
-
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-
                         color: Colors.grey,
                       ),
-
                       onPressed: () {
-
                         setState(() {
-
-                          _obscurePassword =
-                          !_obscurePassword;
+                          _obscurePassword = !_obscurePassword;
                         });
                       },
                     ),
-
-                    contentPadding:
-                    const EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
                     ),
-
                     border: OutlineInputBorder(
-
-                      borderRadius:
-                      BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-
-                    enabledBorder:
-                    OutlineInputBorder(
-
-                      borderRadius:
-                      BorderRadius.circular(10),
-
-                      borderSide: BorderSide(
-                        color: Colors.grey.shade300,
-                      ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
                   ),
                 ),
@@ -377,22 +254,33 @@ class _LoginPageState extends State<LoginPage> {
                 // FORGOT PASSWORD
                 // =========================
                 Align(
-
                   alignment: Alignment.centerRight,
-
-                  child: TextButton(
-
-                    onPressed: () {
-
-                      Navigator.pushNamed(
-                        context,
-                        AppRoutes.forgotPassword,
-                      );
-                    },
-
-                    child: const Text(
-                      "Lupa Password?",
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      const Text(
+                        "Lupa Password?",
+                        style: TextStyle(color: Colors.black),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, AppRoutes.forgotPassword);
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFFD32F2F),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          "Reset",
+                          style: TextStyle(
+                            color: Color(0xFFD32F2F),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -402,56 +290,31 @@ class _LoginPageState extends State<LoginPage> {
                 // LOGIN BUTTON
                 // =========================
                 SizedBox(
-
                   width: double.infinity,
                   height: 50,
-
                   child: ElevatedButton(
-
-                    onPressed:
-                    _isLoading
-                        ? null
-                        : _handleLogin,
-
-                    style:
-                    ElevatedButton.styleFrom(
-
-                      backgroundColor:
-                      const Color(0xFFD32F2F),
-
-                      foregroundColor:
-                      Colors.white,
-
-                      shape:
-                      RoundedRectangleBorder(
-
-                        borderRadius:
-                        BorderRadius.circular(10),
+                    onPressed: _isLoading ? null : _handleLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD32F2F),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-
-                    child:
-                    _isLoading
+                    child: _isLoading
                         ? const SizedBox(
-
                       width: 20,
                       height: 20,
-
-                      child:
-                      CircularProgressIndicator(
-
+                      child: CircularProgressIndicator(
                         color: Colors.white,
                         strokeWidth: 2,
                       ),
                     )
                         : const Text(
-
                       "Login",
-
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight:
-                        FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -463,44 +326,35 @@ class _LoginPageState extends State<LoginPage> {
                 // GOOGLE LOGIN
                 // =========================
                 SizedBox(
-
                   width: double.infinity,
                   height: 50,
-
                   child: OutlinedButton(
-
                     onPressed: () async {
-
                       try {
-
-                        await authController
-                            .loginWithGoogle();
-
+                        await authController.loginWithGoogle();
                       } catch (e) {
-
                         _showPopup(
-                          title:
-                          "Google Login Gagal",
-
-                          message:
-                          "Terjadi kesalahan saat login dengan Google",
+                          title: "Google Login Gagal",
+                          message: "Terjadi kesalahan saat login dengan Google",
                         );
                       }
                     },
-
-                    style:
-                    OutlinedButton.styleFrom(
-
-                      shape:
-                      RoundedRectangleBorder(
-
-                        borderRadius:
-                        BorderRadius.circular(10),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-
-                    child: const Text(
-                      "Login dengan Google",
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/images/google_logo.png',
+                          height: 22,
+                          width: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        const Text("Login dengan Google"),
+                      ],
                     ),
                   ),
                 ),
@@ -511,29 +365,14 @@ class _LoginPageState extends State<LoginPage> {
                 // REGISTER
                 // =========================
                 Row(
-
-                  mainAxisAlignment:
-                  MainAxisAlignment.center,
-
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-
-                    const Text(
-                      "Belum punya akun?",
-                    ),
-
+                    const Text("Belum punya akun?"),
                     TextButton(
-
                       onPressed: () {
-
-                        Navigator.pushNamed(
-                          context,
-                          AppRoutes.register,
-                        );
+                        Navigator.pushNamed(context, AppRoutes.register);
                       },
-
-                      child: const Text(
-                        "Daftar",
-                      ),
+                      child: const Text("Daftar"),
                     ),
                   ],
                 ),
