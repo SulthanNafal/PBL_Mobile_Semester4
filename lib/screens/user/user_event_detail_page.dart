@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../main.dart';
+import 'user_booking_page.dart';
 
 class UserEventDetailPage extends StatefulWidget {
   final Map<String, dynamic> event;
@@ -59,6 +60,9 @@ class _UserEventDetailPageState extends State<UserEventDetailPage> {
     }
   }
 
+  // =========================
+  // DIALOG KONFIRMASI BELI
+  // =========================
   void _showBeliDialog(Map<String, dynamic> tiket) {
     showDialog(
       context: context,
@@ -81,6 +85,11 @@ class _UserEventDetailPageState extends State<UserEventDetailPage> {
                 color: Color(0xFFD32F2F),
               ),
             ),
+            const SizedBox(height: 8),
+            const Text(
+              'Kamu punya 30 menit untuk menyelesaikan pembayaran.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ],
         ),
         actions: [
@@ -91,13 +100,21 @@ class _UserEventDetailPageState extends State<UserEventDetailPage> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: lanjut ke halaman upload bukti bayar
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => UserBookingPage(
+                    tiket: tiket,
+                    event: widget.event,
+                  ),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFD32F2F),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Beli Sekarang'),
+            child: const Text('Lanjut Booking'),
           ),
         ],
       ),
@@ -122,7 +139,9 @@ class _UserEventDetailPageState extends State<UserEventDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
+            // =========================
             // FOTO EVENT
+            // =========================
             event['foto'] != null
                 ? CachedNetworkImage(
               imageUrl: event['foto'],
@@ -152,7 +171,9 @@ class _UserEventDetailPageState extends State<UserEventDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
 
+                  // =========================
                   // INFO EVENT
+                  // =========================
                   Text(
                     event['nama_event'] ?? '-',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -177,7 +198,9 @@ class _UserEventDetailPageState extends State<UserEventDetailPage> {
 
                   const SizedBox(height: 24),
 
+                  // =========================
                   // LIST TIKET
+                  // =========================
                   const Text(
                     'Pilih Tiket',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
