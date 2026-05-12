@@ -42,7 +42,9 @@ class MyApp extends StatefulWidget {
 class _MyAppState
     extends State<MyApp> {
 
-  // navigator key
+  // =========================
+  // NAVIGATOR KEY
+  // =========================
   final GlobalKey<NavigatorState>
   navigatorKey =
   GlobalKey<NavigatorState>();
@@ -53,16 +55,17 @@ class _MyAppState
     super.initState();
 
     // =========================
-    // LISTENER RESET PASSWORD
+    // AUTH STATE LISTENER
     // =========================
     supabase.auth.onAuthStateChange.listen(
 
-          (data) {
+          (data) async {
 
-        final event = data.event;
+        final event =
+            data.event;
 
         // =========================
-        // DETEKSI RECOVERY PASSWORD
+        // PASSWORD RECOVERY
         // =========================
         if (event ==
             AuthChangeEvent.passwordRecovery) {
@@ -70,6 +73,81 @@ class _MyAppState
           navigatorKey.currentState
               ?.pushNamed(
             AppRoutes.resetPassword,
+          );
+        }
+
+        // =========================
+        // LOGIN GOOGLE ONLY
+        // =========================
+        if (event ==
+            AuthChangeEvent.signedIn) {
+
+          final user =
+              supabase.auth.currentUser;
+
+          if (user == null) return;
+
+          // =========================
+          // CEK PROVIDER LOGIN
+          // =========================
+          final provider =
+          user.appMetadata['provider'];
+
+          // HANYA LOGIN GOOGLE
+          if (provider != 'google') {
+            return;
+          }
+
+          // =========================
+          // CEK USER DATABASE
+          // =========================
+          dynamic userData =
+          await supabase
+              .schema('ursaevent')
+              .from('users')
+              .select()
+              .eq('id', user.id)
+              .maybeSingle();
+
+          // =========================
+          // INSERT USER BARU GOOGLE
+          // =========================
+          if (userData == null) {
+
+            await supabase
+                .schema('ursaevent')
+                .from('users')
+                .insert({
+
+              'id': user.id,
+
+              'username':
+              user.userMetadata?['name'] ??
+                  user.email
+                      ?.split('@')[0],
+
+              'email':
+              user.email,
+
+              'password':
+              '-',
+
+              // DEFAULT ROLE
+              'level':
+              'user',
+
+              'created_at':
+              DateTime.now()
+                  .toIso8601String(),
+            });
+          }
+
+          // =========================
+          // REDIRECT DASHBOARD USER
+          // =========================
+          navigatorKey.currentState
+              ?.pushReplacementNamed(
+            AppRoutes.user,
           );
         }
       },
@@ -99,9 +177,15 @@ class _MyAppState
         useMaterial3: true,
       ),
 
+      // =========================
+      // DEFAULT PAGE
+      // =========================
       initialRoute:
       AppRoutes.login,
 
+      // =========================
+      // ROUTES
+      // =========================
       onGenerateRoute:
       AppRoutes.generateRoute,
     );

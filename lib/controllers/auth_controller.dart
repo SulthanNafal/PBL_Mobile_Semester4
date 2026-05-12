@@ -288,6 +288,125 @@ class AuthController {
   }
 
   // ==============================
+  // 🔵 LOGIN GOOGLE
+  // ==============================
+  Future<dynamic> loginWithGoogle() async {
+
+    try {
+
+      // LOGIN GOOGLE
+      await supabase.auth.signInWithOAuth(
+
+        OAuthProvider.google,
+
+        redirectTo:
+        kIsWeb
+            ? null
+            : 'com.ursaevent.app://login-callback/',
+      );
+
+      // TUNGGU SESSION
+      await Future.delayed(
+        const Duration(seconds: 3),
+      );
+
+      // AMBIL USER AUTH
+      final user =
+          supabase.auth.currentUser;
+
+      if (user == null) {
+
+        return
+          "Login Google gagal";
+      }
+
+      // ==============================
+      // CEK USER DI DATABASE
+      // ==============================
+      dynamic userData =
+      await supabase
+          .schema('ursaevent')
+          .from('users')
+          .select()
+          .eq(
+        'id',
+        user.id,
+      )
+          .maybeSingle();
+
+      // ==============================
+      // JIKA USER BELUM ADA
+      // ==============================
+      if (userData == null) {
+
+        await supabase
+            .schema('ursaevent')
+            .from('users')
+            .insert({
+
+          'id': user.id,
+
+          'username':
+          user.userMetadata?['name'] ??
+              user.email
+                  ?.split('@')[0],
+
+          'email':
+          user.email,
+
+          'password':
+          '-',
+
+          // DEFAULT ROLE
+          'level':
+          'user',
+
+          'created_at':
+          DateTime.now()
+              .toIso8601String(),
+        });
+
+        // AMBIL DATA USER BARU
+        userData =
+        await supabase
+            .schema('ursaevent')
+            .from('users')
+            .select()
+            .eq(
+          'id',
+          user.id,
+        )
+            .single();
+      }
+
+      // ==============================
+      // RETURN SUCCESS
+      // ==============================
+      return {
+
+        'status':
+        'success',
+
+        'level':
+        userData['level'],
+
+        'user':
+        userData,
+      };
+
+    } on AuthException catch (e) {
+
+      return
+        "Login Google gagal\n${e.message}";
+
+    } catch (e) {
+
+      return
+        "Terjadi kesalahan sistem\n$e";
+    }
+  }
+
+  // ==============================
   // 📩 RESET PASSWORD EMAIL
   // ==============================
   Future<String?> sendResetPasswordEmail(
@@ -428,23 +547,6 @@ class AuthController {
       return
         "Terjadi kesalahan sistem";
     }
-  }
-
-  // ==============================
-  // 🔵 LOGIN GOOGLE
-  // ==============================
-  Future<void> loginWithGoogle() async {
-
-    await supabase.auth
-        .signInWithOAuth(
-
-      OAuthProvider.google,
-
-      redirectTo:
-      kIsWeb
-          ? null
-          : 'com.ursaevent.app://login-callback/',
-    );
   }
 
   // ==============================
