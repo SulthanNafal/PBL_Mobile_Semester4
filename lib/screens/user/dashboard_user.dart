@@ -1,44 +1,50 @@
 import 'package:flutter/material.dart';
-import '../../routes/app_routes.dart';
+import 'user_home_page.dart';
+import 'user_transaksi_page.dart';
+import 'user_profile_page.dart';
 
-class DashboardUser extends StatelessWidget {
+class DashboardUser extends StatefulWidget {
   const DashboardUser({super.key});
 
-  // Fungsi Logout untuk balik ke halaman login
-  void _handleLogout(BuildContext context) {
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      AppRoutes.login,
-          (route) => false,
-    );
-  }
+  @override
+  State<DashboardUser> createState() => _DashboardUserState();
+}
+
+class _DashboardUserState extends State<DashboardUser> {
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = [
+    const UserHomePage(),
+    const UserTransaksiPage(),
+    const UserProfilePage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              "ini dashboard user",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => _handleLogout(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD32F2F),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text("Logout"),
-            ),
-          ],
-        ),
+      body: _pages[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        selectedItemColor: const Color(0xFFD32F2F),
+        unselectedItemColor: Colors.grey,
+        onTap: (index) => setState(() => _currentIndex = index),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Beranda',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.receipt_long_outlined),
+            activeIcon: Icon(Icons.receipt_long),
+            label: 'Transaksi',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
+        ],
       ),
     );
   }
