@@ -55,7 +55,12 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
     final kuotaController = TextEditingController(text: tiket?['kuota']?.toString());
     final hargaController = TextEditingController(text: tiket?['harga']?.toString());
     final kategoriController = TextEditingController(text: tiket?['kategori']);
-    String status = tiket?['status'] ?? 'aktif';
+    DateTime? tanggalMulai = tiket?['tanggal_mulai'] != null
+        ? DateTime.tryParse(tiket!['tanggal_mulai'])
+        : null;
+    DateTime? tanggalAkhir = tiket?['tanggal_akhir'] != null
+        ? DateTime.tryParse(tiket!['tanggal_akhir'])
+        : null;
     final isEdit = tiket != null;
 
     showModalBottomSheet(
@@ -72,80 +77,176 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
             top: 24,
             bottom: MediaQuery.of(context).viewInsets.bottom + 24,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isEdit ? 'Edit Tiket' : 'Tambah Tiket',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isEdit ? 'Edit Tiket' : 'Tambah Tiket',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: namaTiketController,
-                decoration: _inputDecoration('Nama Tiket'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: kuotaController,
-                keyboardType: TextInputType.number,
-                decoration: _inputDecoration('Kuota'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: hargaController,
-                keyboardType: TextInputType.number,
-                decoration: _inputDecoration('Harga'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: kategoriController,
-                decoration: _inputDecoration('Kategori (VIP, Regular, dll)'),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: status,
-                decoration: _inputDecoration('Status'),
-                items: const [
-                  DropdownMenuItem(value: 'aktif', child: Text('Aktif')),
-                  DropdownMenuItem(value: 'nonaktif', child: Text('Nonaktif')),
-                ],
-                onChanged: (val) => setModalState(() => status = val!),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await _saveTiket(
-                      tiketId: tiket?['id'],
-                      namaTiket: namaTiketController.text.trim(),
-                      kuota: int.tryParse(kuotaController.text.trim()) ?? 0,
-                      harga: double.tryParse(hargaController.text.trim()) ?? 0,
-                      kategori: kategoriController.text.trim(),
-                      status: status,
-                      isEdit: isEdit,
+                const SizedBox(height: 16),
+
+                // NAMA TIKET
+                TextField(
+                  controller: namaTiketController,
+                  decoration: _inputDecoration('Nama Tiket'),
+                ),
+                const SizedBox(height: 12),
+
+                // KUOTA
+                TextField(
+                  controller: kuotaController,
+                  keyboardType: TextInputType.number,
+                  decoration: _inputDecoration('Kuota'),
+                ),
+                const SizedBox(height: 12),
+
+                // HARGA
+                TextField(
+                  controller: hargaController,
+                  keyboardType: TextInputType.number,
+                  decoration: _inputDecoration('Harga'),
+                ),
+                const SizedBox(height: 12),
+
+                // KATEGORI
+                TextField(
+                  controller: kategoriController,
+                  decoration: _inputDecoration('Kategori (VIP, Reguler, dll)'),
+                ),
+                const SizedBox(height: 12),
+
+                // TANGGAL MULAI
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: tanggalMulai ?? DateTime.now(),
+                      firstDate: DateTime(2024),
+                      lastDate: DateTime(2030),
                     );
-                    if (mounted) Navigator.pop(context);
+                    if (picked != null) setModalState(() => tanggalMulai = picked);
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD32F2F),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                  ),
-                  child: Text(
-                    isEdit ? 'Simpan Perubahan' : 'Tambah Tiket',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(
+                          tanggalMulai != null
+                              ? 'Mulai: ${tanggalMulai!.toLocal().toString().split(' ')[0]}'
+                              : 'Tanggal Mulai Penjualan',
+                          style: TextStyle(
+                            color: tanggalMulai != null ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+
+                // TANGGAL AKHIR
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: tanggalAkhir ?? DateTime.now(),
+                      firstDate: DateTime(2024),
+                      lastDate: DateTime(2030),
+                    );
+                    if (picked != null) setModalState(() => tanggalAkhir = picked);
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(
+                          tanggalAkhir != null
+                              ? 'Akhir: ${tanggalAkhir!.toLocal().toString().split(' ')[0]}'
+                              : 'Tanggal Akhir Penjualan',
+                          style: TextStyle(
+                            color: tanggalAkhir != null ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // INFO STATUS OTOMATIS
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.blue.shade100),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Status tiket otomatis diatur berdasarkan tanggal dan kuota.',
+                          style: TextStyle(fontSize: 12, color: Colors.blue),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // TOMBOL SIMPAN
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await _saveTiket(
+                        tiketId: tiket?['id'],
+                        namaTiket: namaTiketController.text.trim(),
+                        kuota: int.tryParse(kuotaController.text.trim()) ?? 0,
+                        harga: double.tryParse(hargaController.text.trim()) ?? 0,
+                        kategori: kategoriController.text.trim(),
+                        tanggalMulai: tanggalMulai,
+                        tanggalAkhir: tanggalAkhir,
+                        isEdit: isEdit,
+                      );
+                      if (mounted) Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD32F2F),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      isEdit ? 'Simpan Perubahan' : 'Tambah Tiket',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -161,37 +262,38 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
     required int kuota,
     required double harga,
     required String kategori,
-    required String status,
+    DateTime? tanggalMulai,
+    DateTime? tanggalAkhir,
     required bool isEdit,
   }) async {
     try {
+      final payload = {
+        'nama_tiket': namaTiket,
+        'kuota': kuota,
+        'harga': harga,
+        'kategori': kategori,
+        'tanggal_mulai': tanggalMulai?.toIso8601String().split('T')[0],
+        'tanggal_akhir': tanggalAkhir?.toIso8601String().split('T')[0],
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
       if (isEdit) {
         await supabase
             .schema('ursaevent')
             .from('tikets')
-            .update({
-          'nama_tiket': namaTiket,
-          'kuota': kuota,
-          'harga': harga,
-          'kategori': kategori,
-          'status': status,
-          'updated_at': DateTime.now().toIso8601String(),
-        })
+            .update(payload)
             .eq('id', tiketId!);
       } else {
-        await supabase.schema('ursaevent').from('tikets').insert({
-          'id_event': widget.event['id_event'],
-          'nama_tiket': namaTiket,
-          'kuota': kuota,
-          'harga': harga,
-          'kategori': kategori,
-          'status': status,
-        });
+        payload['id_event'] = widget.event['id_event'];
+        await supabase.schema('ursaevent').from('tikets').insert(payload);
       }
+
       await _fetchTikets();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isEdit ? 'Tiket berhasil diupdate' : 'Tiket berhasil ditambah')),
+          SnackBar(
+            content: Text(isEdit ? 'Tiket berhasil diupdate' : 'Tiket berhasil ditambah'),
+          ),
         );
       }
     } catch (e) {
@@ -245,6 +347,24 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
           );
         }
       }
+    }
+  }
+
+  // =========================
+  // WARNA STATUS
+  // =========================
+  Color _statusColor(String? status) {
+    switch (status) {
+      case 'tersedia':
+        return Colors.green;
+      case 'belum tersedia':
+        return Colors.orange;
+      case 'stock habis':
+        return Colors.red;
+      case 'tidak tersedia':
+        return Colors.grey;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -352,7 +472,9 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
                   const SizedBox(height: 12),
 
                   _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: Color(0xFFD32F2F)))
+                      ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFD32F2F)),
+                  )
                       : _tikets.isEmpty
                       ? const Center(
                     child: Padding(
@@ -370,6 +492,7 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
                     itemCount: _tikets.length,
                     itemBuilder: (context, index) {
                       final tiket = _tikets[index];
+                      final status = tiket['status'] as String?;
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),
                         shape: RoundedRectangleBorder(
@@ -380,9 +503,33 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
                             horizontal: 16,
                             vertical: 8,
                           ),
-                          title: Text(
-                            tiket['nama_tiket'] ?? '-',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  tiket['nama_tiket'] ?? '-',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _statusColor(status).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  status ?? '-',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: _statusColor(status),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,7 +538,8 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
                               Text('Kategori: ${tiket['kategori'] ?? '-'}'),
                               Text('Kuota: ${tiket['kuota'] ?? 0}'),
                               Text('Harga: Rp ${tiket['harga'] ?? 0}'),
-                              Text('Status: ${tiket['status'] ?? '-'}'),
+                              Text('Mulai: ${tiket['tanggal_mulai'] ?? '-'}'),
+                              Text('Akhir: ${tiket['tanggal_akhir'] ?? '-'}'),
                             ],
                           ),
                           trailing: Row(
