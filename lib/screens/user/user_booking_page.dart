@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../routes/app_routes.dart';
@@ -23,20 +24,44 @@ class _UserBookingPageState extends State<UserBookingPage> {
   int _sisaDetik = 30 * 60;
   bool _isLoading = true;
   bool _isTimeout = false;
-  int? _idTransaksi;
+  bool _sudahBuat = false;
+  String? _idTransaksi;
   String _username = '-';
   String _nama = '-';
 
   @override
   void initState() {
     super.initState();
-    _buatTransaksi();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_sudahBuat) {
+        _buatTransaksi();
+      }
+    });
+  }
+
+  // =========================
+  // GENERATE ID TRANSAKSI
+  // =========================
+  String _generateIdTransaksi() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    final tahun = DateTime.now().year;
+    final randomString = List.generate(
+      20,
+          (index) => chars[random.nextInt(chars.length)],
+    ).join();
+    return 'URSA-$tahun-$randomString';
   }
 
   // =========================
   // BUAT TRANSAKSI + HOLD KUOTA
   // =========================
   Future<void> _buatTransaksi() async {
+    if (_sudahBuat) return;
+    _sudahBuat = true;
+
+    print('=== _buatTransaksi dipanggil ===');
+
     try {
       final user = supabase.auth.currentUser;
       if (user == null) return;
@@ -56,12 +81,14 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
       final now = DateTime.now();
       final expiredAt = now.add(const Duration(minutes: 30));
+      final idTransaksi = _generateIdTransaksi();
 
       // INSERT TRANSAKSI
-      final result = await supabase
+      await supabase
           .schema('ursaevent')
           .from('transaksis')
           .insert({
+        'id_transaksi': idTransaksi,
         'id_user': user.id,
         'id_tiket': widget.tiket['id'],
         'id_event': widget.event['id_event'],
@@ -70,19 +97,14 @@ class _UserBookingPageState extends State<UserBookingPage> {
         'waktu': now.toIso8601String().split('T')[1].substring(0, 8),
         'status': 'holding',
         'expired_at': expiredAt.toIso8601String(),
-      })
-          .select()
-          .single();
+      });
 
-      // KURANGI KUOTA
-      await supabase
-          .schema('ursaevent')
-          .from('tikets')
-          .update({'kuota': widget.tiket['kuota'] - 1})
-          .eq('id', widget.tiket['id']);
+      // KURANGI KUOTA PAKAI RPC
+      print('=== decrement_kuota dipanggil ===');
+      await supabase.rpc('decrement_kuota', params: {'tiket_id': widget.tiket['id']});
 
       setState(() {
-        _idTransaksi = result['id_transaksi'];
+        _idTransaksi = idTransaksi;
         _isLoading = false;
       });
 
@@ -118,11 +140,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
     setState(() => _isTimeout = true);
 
     try {
-      await supabase
-          .schema('ursaevent')
-          .from('tikets')
-          .update({'kuota': widget.tiket['kuota'] + 1})
-          .eq('id', widget.tiket['id']);
+      await supabase.rpc('increment_kuota', params: {'tiket_id': widget.tiket['id']});
 
       if (_idTransaksi != null) {
         await supabase
@@ -161,6 +179,55 @@ class _UserBookingPageState extends State<UserBookingPage> {
           ],
         ),
       );
+    }
+  }
+
+  // =========================
+  // BATAL MANUAL
+  // =========================
+  Future<void> _handleBatal() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Batalkan Pesanan?'),
+        content: const Text(
+          'Kuota tiket akan dikembalikan jika kamu membatalkan pesanan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Tidak'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Ya, Batalkan', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      _timer?.cancel();
+      try {
+        print('=== increment_kuota dipanggil saat batal ===');
+        await supabase.rpc('increment_kuota', params: {'tiket_id': widget.tiket['id']});
+
+        if (_idTransaksi != null) {
+          await supabase
+              .schema('ursaevent')
+              .from('transaksis')
+              .update({'status': 'cancel'})
+              .eq('id_transaksi', _idTransaksi!);
+        }
+      } catch (_) {}
+
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.user,
+              (route) => false,
+        );
+      }
     }
   }
 
@@ -249,6 +316,39 @@ class _UserBookingPageState extends State<UserBookingPage> {
             ),
 
             const SizedBox(height: 24),
+
+            // =========================
+            // ID TRANSAKSI
+            // =========================
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'ID Transaksi',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _idTransaksi ?? '-',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
 
             // =========================
             // DETAIL PEMESAN
@@ -417,57 +517,8 @@ class _UserBookingPageState extends State<UserBookingPage> {
     );
   }
 
-  // =========================
-  // BATAL MANUAL
-  // =========================
-  Future<void> _handleBatal() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Batalkan Pesanan?'),
-        content: const Text('Kuota tiket akan dikembalikan jika kamu membatalkan pesanan.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Tidak'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Ya, Batalkan', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      _timer?.cancel();
-      try {
-        await supabase
-            .schema('ursaevent')
-            .from('tikets')
-            .update({'kuota': widget.tiket['kuota'] + 1})
-            .eq('id', widget.tiket['id']);
-
-        if (_idTransaksi != null) {
-          await supabase
-              .schema('ursaevent')
-              .from('transaksis')
-              .update({'status': 'cancel'})
-              .eq('id_transaksi', _idTransaksi!);
-        }
-      } catch (_) {}
-
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.user,
-              (route) => false,
-        );
-      }
-    }
-  }
-
-  Widget _buildRow(String label, String value, {bool isBold = false, Color? valueColor}) {
+  Widget _buildRow(String label, String value,
+      {bool isBold = false, Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(

@@ -6,7 +6,7 @@ import '../../main.dart';
 import '../../routes/app_routes.dart';
 
 class UserUploadBuktiPage extends StatefulWidget {
-  final int idTransaksi;
+  final String idTransaksi;
   final Map<String, dynamic> tiket;
   final Map<String, dynamic> event;
   final Timer? timer;
@@ -49,22 +49,15 @@ class _UserUploadBuktiPageState extends State<UserUploadBuktiPage> {
     setState(() => _isUploading = true);
 
     try {
-      final user = supabase.auth.currentUser;
-      if (user == null) return;
-
-      // UPLOAD KE STORAGE
-      final fileName = 'bukti_${widget.idTransaksi}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final fileName =
+          'bukti_${widget.idTransaksi}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final bytes = await _imageBukti!.readAsBytes();
 
-      await supabase.storage
-          .from('bukti-bayar')
-          .uploadBinary(fileName, bytes);
+      await supabase.storage.from('bukti-bayar').uploadBinary(fileName, bytes);
 
-      final urlBukti = supabase.storage
-          .from('bukti-bayar')
-          .getPublicUrl(fileName);
+      final urlBukti =
+      supabase.storage.from('bukti-bayar').getPublicUrl(fileName);
 
-      // UPDATE TRANSAKSI
       await supabase
           .schema('ursaevent')
           .from('transaksis')
@@ -74,7 +67,6 @@ class _UserUploadBuktiPageState extends State<UserUploadBuktiPage> {
       })
           .eq('id_transaksi', widget.idTransaksi);
 
-      // STOP TIMER
       widget.timer?.cancel();
 
       if (mounted) {
@@ -151,8 +143,14 @@ class _UserUploadBuktiPageState extends State<UserUploadBuktiPage> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
+                  Text(
+                    'ID: ${widget.idTransaksi}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 4),
                   Text('Event: ${widget.event['nama_event']}'),
-                  Text('Tiket: ${widget.tiket['nama_tiket']} - ${widget.tiket['kategori']}'),
+                  Text(
+                      'Tiket: ${widget.tiket['nama_tiket']} - ${widget.tiket['kategori']}'),
                   Text(
                     'Total: Rp ${widget.tiket['harga']}',
                     style: const TextStyle(
@@ -181,10 +179,7 @@ class _UserUploadBuktiPageState extends State<UserUploadBuktiPage> {
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.grey.shade300,
-                    style: BorderStyle.solid,
-                  ),
+                  border: Border.all(color: Colors.grey.shade300),
                 ),
                 child: _imageBukti != null
                     ? ClipRRect(
@@ -194,7 +189,8 @@ class _UserUploadBuktiPageState extends State<UserUploadBuktiPage> {
                     : const Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.upload_file_outlined, size: 48, color: Colors.grey),
+                    Icon(Icons.upload_file_outlined,
+                        size: 48, color: Colors.grey),
                     SizedBox(height: 8),
                     Text(
                       'Tap untuk pilih foto',
@@ -202,7 +198,8 @@ class _UserUploadBuktiPageState extends State<UserUploadBuktiPage> {
                     ),
                     Text(
                       'JPG, PNG maksimal 5MB',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                      style:
+                      TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ],
                 ),
@@ -244,7 +241,8 @@ class _UserUploadBuktiPageState extends State<UserUploadBuktiPage> {
                     : const Icon(Icons.check_circle_outline),
                 label: Text(
                   _isUploading ? 'Mengupload...' : 'Kirim Bukti Pembayaran',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
