@@ -17,51 +17,41 @@ import '../screens/finance/dashboard_finance.dart';
 import '../screens/superadmin/dashbord_superadmin.dart';
 import '../screens/user/dashboard_user.dart';
 
+// =========================
+// USER PAGES
+// =========================
+import '../screens/user/user_refund_page.dart';
+
 class AppRoutes {
 
   // =========================
   // AUTH ROUTES
   // =========================
-  static const String login =
-      '/';
-
-  static const String register =
-      '/register';
-
-  static const String forgotPassword =
-      '/forgot-password';
-
-  static const String resetPassword =
-      '/reset-password';
+  static const String login = '/';
+  static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
 
   // =========================
   // DASHBOARD ROUTES
   // =========================
-  static const String superadmin =
-      '/superadmin';
+  static const String superadmin = '/superadmin';
+  static const String admin = '/admin';
+  static const String crew = '/crew';
+  static const String finance = '/finance';
+  static const String user = '/user';
 
-  static const String admin =
-      '/admin';
-
-  static const String crew =
-      '/crew';
-
-  static const String finance =
-      '/finance';
-
-  static const String user =
-      '/user';
+  // =========================
+  // USER ROUTES
+  // =========================
+  static const String userRefund = '/user-refund';
 
   // =========================
   // GENERATE ROUTE
   // =========================
-  static Route<dynamic> generateRoute(
-      RouteSettings settings,
-      ) {
+  static Route<dynamic> generateRoute(RouteSettings settings) {
 
-    final uri = Uri.parse(
-      settings.name ?? '',
-    );
+    final uri = Uri.parse(settings.name ?? '');
 
     switch (uri.path) {
 
@@ -69,103 +59,93 @@ class AppRoutes {
     // LOGIN PAGE
     // =========================
       case login:
-
         return MaterialPageRoute(
-          builder: (_) =>
-          const LoginPage(),
+          builder: (_) => const LoginPage(),
         );
 
     // =========================
     // REGISTER PAGE
     // =========================
       case register:
-
         return MaterialPageRoute(
-          builder: (_) =>
-          const RegisterPage(),
+          builder: (_) => const RegisterPage(),
         );
 
     // =========================
     // FORGOT PASSWORD PAGE
     // =========================
       case forgotPassword:
-
         return MaterialPageRoute(
-          builder: (_) =>
-          const ForgetPage(),
+          builder: (_) => const ForgetPage(),
         );
 
     // =========================
     // RESET PASSWORD PAGE
     // =========================
       case resetPassword:
-
         return MaterialPageRoute(
-          builder: (_) =>
-          const ResetPasswordPage(),
+          builder: (_) => const ResetPasswordPage(),
         );
 
     // =========================
     // SUPERADMIN DASHBOARD
     // =========================
       case superadmin:
-
         return MaterialPageRoute(
-          builder: (_) =>
-          const DashbordSuperadmin(),
+          builder: (_) => const DashbordSuperadmin(),
         );
 
     // =========================
     // ADMIN DASHBOARD
     // =========================
       case admin:
-
         return MaterialPageRoute(
-          builder: (_) =>
-          const DashboardAdmin(),
+          builder: (_) => const DashboardAdmin(),
         );
 
     // =========================
     // CREW DASHBOARD
     // =========================
       case crew:
-
         return MaterialPageRoute(
-          builder: (_) =>
-          const DashboardCrew(),
+          builder: (_) => const DashboardCrew(),
         );
 
     // =========================
     // FINANCE DASHBOARD
     // =========================
       case finance:
-
         return MaterialPageRoute(
-          builder: (_) =>
-          const DashboardFinance(),
+          builder: (_) => const DashboardFinance(),
         );
 
     // =========================
     // USER DASHBOARD
     // =========================
       case user:
-
         return MaterialPageRoute(
-          builder: (_) =>
-          const DashboardUser(),
+          builder: (_) => const DashboardUser(),
+        );
+
+    // =========================
+    // USER REFUND PAGE
+    // =========================
+      case userRefund:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => UserRefundPage(
+            idTransaksi: args['id_transaksi'],
+            subTotal: args['sub_total'],
+          ),
         );
 
     // =========================
     // DEFAULT ERROR PAGE
     // =========================
       default:
-
         return MaterialPageRoute(
-
           builder: (_) => Scaffold(
-
             body: Center(
-
               child: Text(
                 'Halaman tidak ditemukan: ${settings.name}',
               ),

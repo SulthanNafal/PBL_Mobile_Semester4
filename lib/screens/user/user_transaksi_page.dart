@@ -137,7 +137,6 @@ class _UserTransaksiPageState extends State<UserTransaksiPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     // STATUS + ID
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -243,6 +242,34 @@ class _UserTransaksiPageState extends State<UserTransaksiPage> {
                         ),
                       ],
                     ),
+
+                    // TOMBOL REFUND (Hanya muncul jika status 'cancel')
+                    if (status == 'cancel') ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.pushNamed(
+                            context,
+                            '/user-refund', // Ganti dengan AppRoutes.userRefund jika sudah ada
+                            arguments: {
+                              'id_transaksi': trx['id_transaksi'],
+                              'sub_total': trx['sub_total'],
+                            },
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          icon: const Icon(Icons.replay_outlined, size: 16),
+                          label: const Text('Ajukan Refund',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
