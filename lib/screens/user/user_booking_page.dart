@@ -54,17 +54,65 @@ class _UserBookingPageState extends State<UserBookingPage> {
   }
 
   // =========================
+  // DECREMENT KUOTA
+  // =========================
+  Future<void> _decrementKuota() async {
+    final tiketData = await supabase
+        .schema('ursaevent')
+        .from('tikets')
+        .select('kuota')
+        .eq('id', widget.tiket['id'])
+        .single();
+
+    final kuota = tiketData['kuota'] ?? 0;
+    if (kuota <= 0) throw Exception('Kuota tiket sudah habis');
+
+    await supabase
+        .schema('ursaevent')
+        .from('tikets')
+        .update({'kuota': kuota - 1})
+        .eq('id', widget.tiket['id']);
+
+    debugPrint('=== DECREMENT KUOTA: $kuota → ${kuota - 1} ===');
+  }
+
+  // =========================
+  // INCREMENT KUOTA
+  // =========================
+  Future<void> _incrementKuota() async {
+    final tiketData = await supabase
+        .schema('ursaevent')
+        .from('tikets')
+        .select('kuota')
+        .eq('id', widget.tiket['id'])
+        .single();
+
+    final kuota = tiketData['kuota'] ?? 0;
+
+    await supabase
+        .schema('ursaevent')
+        .from('tikets')
+        .update({'kuota': kuota + 1})
+        .eq('id', widget.tiket['id']);
+
+    debugPrint('=== INCREMENT KUOTA: $kuota → ${kuota + 1} ===');
+  }
+
+  // =========================
   // BUAT TRANSAKSI + HOLD KUOTA
   // =========================
   Future<void> _buatTransaksi() async {
     if (_sudahBuat) return;
     _sudahBuat = true;
 
-    print('=== _buatTransaksi dipanggil ===');
+    debugPrint('=== _buatTransaksi dipanggil ===');
 
     try {
       final user = supabase.auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        Navigator.pop(context);
+        return;
+      }
 
       // FETCH USERNAME & NAMA
       final userData = await supabase
@@ -83,6 +131,9 @@ class _UserBookingPageState extends State<UserBookingPage> {
       final expiredAt = now.add(const Duration(minutes: 30));
       final idTransaksi = _generateIdTransaksi();
 
+      // CEK & KURANGI KUOTA
+      await _decrementKuota();
+
       // INSERT TRANSAKSI
       await supabase
           .schema('ursaevent')
@@ -99,9 +150,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
         'expired_at': expiredAt.toIso8601String(),
       });
 
-      // KURANGI KUOTA PAKAI RPC
-      print('=== decrement_kuota dipanggil ===');
-      await supabase.rpc('decrement_kuota', params: {'tiket_id': widget.tiket['id']});
+      if (!mounted) return;
 
       setState(() {
         _idTransaksi = idTransaksi;
@@ -110,9 +159,10 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
       _startTimer();
     } catch (e) {
+      debugPrint('ERROR BUAT TRANSAKSI: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membuat transaksi: $e')),
+          SnackBar(content: Text('Gagal booking tiket: $e')),
         );
         Navigator.pop(context);
       }
@@ -128,7 +178,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
         timer.cancel();
         _handleTimeout();
       } else {
-        setState(() => _sisaDetik--);
+        if (mounted) setState(() => _sisaDetik--);
       }
     });
   }
@@ -137,19 +187,36 @@ class _UserBookingPageState extends State<UserBookingPage> {
   // TIMEOUT → CANCEL TRANSAKSI
   // =========================
   Future<void> _handleTimeout() async {
+    if (_isTimeout) return;
+    _timer?.cancel();
     setState(() => _isTimeout = true);
 
     try {
-      await supabase.rpc('increment_kuota', params: {'tiket_id': widget.tiket['id']});
+      if (_idTransaksi == null) return;
 
-      if (_idTransaksi != null) {
-        await supabase
-            .schema('ursaevent')
-            .from('transaksis')
-            .update({'status': 'cancel'})
-            .eq('id_transaksi', _idTransaksi!);
-      }
-    } catch (_) {}
+      // CEK STATUS TRANSAKSI DULU
+      final transaksi = await supabase
+          .schema('ursaevent')
+          .from('transaksis')
+          .select('status')
+          .eq('id_transaksi', _idTransaksi!)
+          .single();
+
+      if (transaksi['status'] != 'holding') return;
+
+      // UPDATE STATUS CANCEL
+      await supabase
+          .schema('ursaevent')
+          .from('transaksis')
+          .update({'status': 'cancel'})
+          .eq('id_transaksi', _idTransaksi!);
+
+      // KEMBALIKAN KUOTA
+      await _incrementKuota();
+      debugPrint('=== TIMEOUT → KUOTA DIKEMBALIKAN ===');
+    } catch (e) {
+      debugPrint('ERROR TIMEOUT: $e');
+    }
 
     if (mounted) {
       showDialog(
@@ -206,26 +273,49 @@ class _UserBookingPageState extends State<UserBookingPage> {
       ),
     );
 
-    if (confirm == true) {
-      _timer?.cancel();
-      try {
-        print('=== increment_kuota dipanggil saat batal ===');
-        await supabase.rpc('increment_kuota', params: {'tiket_id': widget.tiket['id']});
+    if (confirm != true) return;
 
-        if (_idTransaksi != null) {
-          await supabase
-              .schema('ursaevent')
-              .from('transaksis')
-              .update({'status': 'cancel'})
-              .eq('id_transaksi', _idTransaksi!);
-        }
-      } catch (_) {}
+    try {
+      _timer?.cancel();
+
+      if (_idTransaksi == null) return;
+
+      // CEK STATUS TRANSAKSI DULU
+      final transaksi = await supabase
+          .schema('ursaevent')
+          .from('transaksis')
+          .select('status')
+          .eq('id_transaksi', _idTransaksi!)
+          .single();
+
+      if (transaksi['status'] != 'holding') return;
+
+      // UPDATE STATUS CANCEL
+      await supabase
+          .schema('ursaevent')
+          .from('transaksis')
+          .update({'status': 'cancel'})
+          .eq('id_transaksi', _idTransaksi!);
+
+      // KEMBALIKAN KUOTA
+      await _incrementKuota();
+      debugPrint('=== BATAL → KUOTA DIKEMBALIKAN ===');
 
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pesanan berhasil dibatalkan')),
+        );
         Navigator.pushNamedAndRemoveUntil(
           context,
           AppRoutes.user,
               (route) => false,
+        );
+      }
+    } catch (e) {
+      debugPrint('ERROR BATAL: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membatalkan pesanan: $e')),
         );
       }
     }
@@ -459,7 +549,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton.icon(
-                onPressed: _isTimeout
+                onPressed: _isTimeout || _idTransaksi == null
                     ? null
                     : () {
                   Navigator.push(
