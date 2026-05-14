@@ -46,6 +46,31 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
   }
 
   // =========================
+  // INCREMENT KUOTA
+  // =========================
+  Future<void> _incrementKuota() async {
+    final idTiket = _trx['id_tiket'];
+    if (idTiket == null) return;
+
+    final tiketData = await supabase
+        .schema('ursaevent')
+        .from('tikets')
+        .select('kuota')
+        .eq('id', idTiket)
+        .single();
+
+    final kuota = tiketData['kuota'] ?? 0;
+
+    await supabase
+        .schema('ursaevent')
+        .from('tikets')
+        .update({'kuota': kuota + 1})
+        .eq('id', idTiket);
+
+    debugPrint('=== INCREMENT KUOTA: $kuota → ${kuota + 1} ===');
+  }
+
+  // =========================
   // KONFIRMASI PEMBAYARAN → AKTIF
   // =========================
   Future<void> _konfirmasiPembayaran() async {
@@ -95,48 +120,225 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
   }
 
   // =========================
-  // TOLAK PEMBAYARAN → CANCEL
+  // TOLAK PEMBAYARAN → 2 PILIHAN
   // =========================
   Future<void> _tolakPembayaran() async {
-    final confirm = await showDialog<bool>(
+    // Dialog pilihan jenis penolakan
+    final pilihan = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Tolak Pembayaran'),
-        content: const Text('Apakah kamu yakin ingin menolak pembayaran ini?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD32F2F),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pilih alasan penolakan:',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
             ),
-            child: const Text('Ya, Tolak'),
+            const SizedBox(height: 16),
+
+            // PILIHAN 1: Bukti tidak valid → hapus dari DB
+            GestureDetector(
+              onTap: () => Navigator.pop(context, 'hapus'),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever_outlined, color: Colors.red.shade700, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Bukti Tidak Valid / Tidak Ada',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade700, fontSize: 13),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Data transaksi akan dihapus permanen & kuota dikembalikan.',
+                            style: TextStyle(fontSize: 11, color: Colors.red.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // PILIHAN 2: Tolak biasa → user bisa refund
+            GestureDetector(
+              onTap: () => Navigator.pop(context, 'refund'),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.replay_outlined, color: Colors.orange.shade700, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tolak & Kembalikan ke User',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade700, fontSize: 13),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Status cancel, user bisa mengajukan refund & kuota dikembalikan.',
+                            style: TextStyle(fontSize: 11, color: Colors.orange.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('Batal'),
           ),
         ],
       ),
     );
-    if (confirm != true) return;
-    setState(() => _isLoading = true);
-    try {
-      await supabase
-          .schema('ursaevent')
-          .from('transaksis')
-          .update({'status': 'cancel'})
-          .eq('id_transaksi', _trx['id_transaksi']);
-      setState(() {
-        _trx['status'] = 'cancel';
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pembayaran ditolak.'), backgroundColor: Colors.red),
-        );
+
+    if (pilihan == null) return;
+
+    // -------------------------------------------------------
+    // PILIHAN 1: Bukti tidak valid → DELETE transaksi dari DB
+    // -------------------------------------------------------
+    if (pilihan == 'hapus') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Hapus Transaksi?'),
+          content: const Text(
+            'Data transaksi ini akan dihapus permanen dari database.\nKuota tiket akan dikembalikan.\n\nAksi ini tidak bisa dibatalkan!',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Ya, Hapus Permanen'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+
+      setState(() => _isLoading = true);
+      try {
+        // INCREMENT KUOTA dulu sebelum hapus
+        await _incrementKuota();
+
+        // HAPUS TRANSAKSI DARI DATABASE
+        await supabase
+            .schema('ursaevent')
+            .from('transaksis')
+            .delete()
+            .eq('id_transaksi', _trx['id_transaksi']);
+
+        debugPrint('=== TOLAK (HAPUS) → TRANSAKSI DIHAPUS & KUOTA DIKEMBALIKAN ===');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🗑️ Transaksi dihapus & kuota dikembalikan.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.pop(context); // kembali ke list transaksi
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal hapus transaksi: $e')));
       }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menolak: $e')));
+      return;
+    }
+
+    // -------------------------------------------------------
+    // PILIHAN 2: Tolak biasa → status cancel, user bisa refund
+    // -------------------------------------------------------
+    if (pilihan == 'refund') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Tolak & Kembalikan ke User'),
+          content: const Text(
+            'Status transaksi akan menjadi "cancel".\nUser akan bisa mengajukan refund.\nKuota tiket akan dikembalikan.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Ya, Tolak'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+
+      setState(() => _isLoading = true);
+      try {
+        // INCREMENT KUOTA
+        await _incrementKuota();
+
+        // UPDATE STATUS → CANCEL (user bisa ajukan refund)
+        await supabase
+            .schema('ursaevent')
+            .from('transaksis')
+            .update({'status': 'cancel'})
+            .eq('id_transaksi', _trx['id_transaksi']);
+
+        setState(() {
+          _trx['status'] = 'cancel';
+          _isLoading = false;
+        });
+
+        debugPrint('=== TOLAK (REFUND) → STATUS CANCEL & KUOTA DIKEMBALIKAN ===');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pembayaran ditolak. User dapat mengajukan refund.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menolak: $e')));
+      }
     }
   }
 
@@ -212,6 +414,228 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal proses refund: $e')));
+    }
+  }
+
+  // =========================
+  // TOLAK REFUND → 2 PILIHAN
+  // =========================
+  Future<void> _tolakRefund() async {
+    final pilihan = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Tolak Pengajuan Refund'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pilih alasan penolakan refund:',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+
+            // PILIHAN 1: Tidak sesuai → tolak permanen
+            GestureDetector(
+              onTap: () => Navigator.pop(context, 'tolak_permanen'),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.block_outlined, color: Colors.red.shade700, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tolak Permanen (Tidak Sesuai)',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade700, fontSize: 13),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Data refund dihapus, status kembali ke "cancel". User tidak bisa ajukan refund lagi.',
+                            style: TextStyle(fontSize: 11, color: Colors.red.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // PILIHAN 2: Kembalikan ke user untuk isi ulang
+            GestureDetector(
+              onTap: () => Navigator.pop(context, 'kembalikan'),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, color: Colors.orange.shade700, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Kembalikan ke User (Isi Ulang)',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade700, fontSize: 13),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Data refund direset, user bisa mengisi ulang info rekening refund.',
+                            style: TextStyle(fontSize: 11, color: Colors.orange.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('Batal'),
+          ),
+        ],
+      ),
+    );
+
+    if (pilihan == null) return;
+
+    // -------------------------------------------------------
+    // PILIHAN 1: Tolak permanen → status tetap cancel, hapus data refund
+    // -------------------------------------------------------
+    if (pilihan == 'tolak_permanen') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Tolak Refund Permanen?'),
+          content: const Text(
+            'Data rekening refund user akan dihapus.\nStatus tetap "cancel" dan user tidak bisa mengajukan refund lagi untuk transaksi ini.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Ya, Tolak Permanen'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+
+      setState(() => _isLoading = true);
+      try {
+        // HAPUS TRANSAKSI PERMANEN DARI DATABASE
+        await supabase
+            .schema('ursaevent')
+            .from('transaksis')
+            .delete()
+            .eq('id_transaksi', _trx['id_transaksi']);
+
+        debugPrint('=== TOLAK REFUND PERMANEN → TRANSAKSI DIHAPUS DARI DATABASE ===');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🚫 Refund ditolak, transaksi dihapus permanen.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.pop(context); // kembali ke list transaksi
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal hapus transaksi: $e')));
+      }
+      return;
+    }
+
+    // -------------------------------------------------------
+    // PILIHAN 2: Kembalikan ke user → reset data refund, status cancel
+    // -------------------------------------------------------
+    if (pilihan == 'kembalikan') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Kembalikan ke User?'),
+          content: const Text(
+            'Data rekening refund akan direset.\nUser dapat mengisi ulang info rekening dan mengajukan refund kembali.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Ya, Kembalikan'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+
+      setState(() => _isLoading = true);
+      try {
+        await supabase
+            .schema('ursaevent')
+            .from('transaksis')
+            .update({
+          'status': 'cancel',
+          'refund_bank': null,
+          'refund_no_va': null,
+          'refund_nama': null,
+        }).eq('id_transaksi', _trx['id_transaksi']);
+
+        setState(() {
+          _trx['status'] = 'cancel';
+          _trx['refund_bank'] = null;
+          _trx['refund_no_va'] = null;
+          _trx['refund_nama'] = null;
+          _isLoading = false;
+        });
+
+        debugPrint('=== TOLAK REFUND → DIKEMBALIKAN KE USER UNTUK ISI ULANG ===');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('↩️ Refund dikembalikan. User bisa isi ulang rekening.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal kembalikan refund: $e')));
+      }
     }
   }
 
@@ -502,19 +926,37 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
                     ),
                   ],
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _prosesRefund,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _tolakRefund,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFD32F2F),
+                            side: const BorderSide(color: Color(0xFFD32F2F)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          icon: const Icon(Icons.close, size: 18),
+                          label: const Text('Tolak Refund', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
                       ),
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: const Text('Tandai Refund Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          onPressed: _prosesRefund,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          icon: const Icon(Icons.check_circle_outline),
+                          label: const Text('Tandai Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

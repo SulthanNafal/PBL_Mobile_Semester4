@@ -184,7 +184,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
   }
 
   // =========================
-  // TIMEOUT → CANCEL TRANSAKSI
+  // TIMEOUT → HAPUS TRANSAKSI (HOLDING)
   // =========================
   Future<void> _handleTimeout() async {
     if (_isTimeout) return;
@@ -204,16 +204,16 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
       if (transaksi['status'] != 'holding') return;
 
-      // UPDATE STATUS CANCEL
+      // HAPUS TRANSAKSI DARI DATABASE (masih holding = belum bayar)
       await supabase
           .schema('ursaevent')
           .from('transaksis')
-          .update({'status': 'cancel'})
+          .delete()
           .eq('id_transaksi', _idTransaksi!);
 
       // KEMBALIKAN KUOTA
       await _incrementKuota();
-      debugPrint('=== TIMEOUT → KUOTA DIKEMBALIKAN ===');
+      debugPrint('=== TIMEOUT → TRANSAKSI DIHAPUS & KUOTA DIKEMBALIKAN ===');
     } catch (e) {
       debugPrint('ERROR TIMEOUT: $e');
     }
@@ -250,7 +250,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
   }
 
   // =========================
-  // BATAL MANUAL
+  // BATAL MANUAL → HAPUS TRANSAKSI (HOLDING)
   // =========================
   Future<void> _handleBatal() async {
     final confirm = await showDialog<bool>(
@@ -290,16 +290,16 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
       if (transaksi['status'] != 'holding') return;
 
-      // UPDATE STATUS CANCEL
+      // HAPUS TRANSAKSI DARI DATABASE (masih holding = belum bayar)
       await supabase
           .schema('ursaevent')
           .from('transaksis')
-          .update({'status': 'cancel'})
+          .delete()
           .eq('id_transaksi', _idTransaksi!);
 
       // KEMBALIKAN KUOTA
       await _incrementKuota();
-      debugPrint('=== BATAL → KUOTA DIKEMBALIKAN ===');
+      debugPrint('=== BATAL → TRANSAKSI DIHAPUS & KUOTA DIKEMBALIKAN ===');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
