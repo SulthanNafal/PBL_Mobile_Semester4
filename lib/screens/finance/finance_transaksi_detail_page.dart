@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../main.dart';
 
 class FinanceTransaksiDetailPage extends StatefulWidget {
@@ -13,6 +15,8 @@ class FinanceTransaksiDetailPage extends StatefulWidget {
 class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage> {
   late Map<String, dynamic> _trx;
   bool _isLoading = false;
+  File? _buktiRefundFile;
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -33,7 +37,7 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
       case 'holding': return Colors.purple;
       case 'menunggu konfirmasi': return Colors.orange;
       case 'dikonfirmasi': return Colors.blue;
-      case 'tiket dikirim': return Colors.green;
+      case 'aktif': return Colors.green;
       case 'cancel': return Colors.red;
       case 'refund':
       case 'refund diajukan': return Colors.teal;
@@ -41,17 +45,24 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
     }
   }
 
+  // =========================
+  // KONFIRMASI PEMBAYARAN → AKTIF
+  // =========================
   Future<void> _konfirmasiPembayaran() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Konfirmasi Pembayaran'),
-        content: const Text('Apakah pembayaran ini sudah valid?\nStatus akan berubah menjadi "tiket dikirim".'),
+        content: const Text('Apakah pembayaran ini sudah valid?\nStatus akan berubah menjadi "aktif".'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
             child: const Text('Ya, Konfirmasi'),
           ),
         ],
@@ -60,26 +71,47 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
     if (confirm != true) return;
     setState(() => _isLoading = true);
     try {
-      await supabase.schema('ursaevent').from('transaksis').update({'status': 'tiket dikirim'}).eq('id_transaksi', _trx['id_transaksi']);
-      setState(() { _trx['status'] = 'tiket dikirim'; _isLoading = false; });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Pembayaran dikonfirmasi, tiket telah dikirim!'), backgroundColor: Colors.green));
+      await supabase
+          .schema('ursaevent')
+          .from('transaksis')
+          .update({'status': 'aktif'})
+          .eq('id_transaksi', _trx['id_transaksi']);
+      setState(() {
+        _trx['status'] = 'aktif';
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Pembayaran dikonfirmasi, tiket aktif!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal konfirmasi: $e')));
     }
   }
 
+  // =========================
+  // TOLAK PEMBAYARAN → CANCEL
+  // =========================
   Future<void> _tolakPembayaran() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Tolak Pembayaran'),
-        content: const Text('Apakah kamu yakin ingin menolak pembayaran ini?\nUser akan diminta mengajukan refund.'),
+        content: const Text('Apakah kamu yakin ingin menolak pembayaran ini?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD32F2F),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
             child: const Text('Ya, Tolak'),
           ),
         ],
@@ -88,16 +120,45 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
     if (confirm != true) return;
     setState(() => _isLoading = true);
     try {
-      await supabase.schema('ursaevent').from('transaksis').update({'status': 'cancel'}).eq('id_transaksi', _trx['id_transaksi']);
-      setState(() { _trx['status'] = 'cancel'; _isLoading = false; });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pembayaran ditolak. User akan diarahkan untuk refund.'), backgroundColor: Colors.red));
+      await supabase
+          .schema('ursaevent')
+          .from('transaksis')
+          .update({'status': 'cancel'})
+          .eq('id_transaksi', _trx['id_transaksi']);
+      setState(() {
+        _trx['status'] = 'cancel';
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pembayaran ditolak.'), backgroundColor: Colors.red),
+        );
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menolak: $e')));
     }
   }
 
+  // =========================
+  // PICK BUKTI REFUND
+  // =========================
+  Future<void> _pickBuktiRefund() async {
+    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    if (picked != null) setState(() => _buktiRefundFile = File(picked.path));
+  }
+
+  // =========================
+  // PROSES REFUND + UPLOAD BUKTI
+  // =========================
   Future<void> _prosesRefund() async {
+    if (_buktiRefundFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Upload bukti refund dulu!'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -107,26 +168,58 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
             child: const Text('Ya, Selesai'),
           ),
         ],
       ),
     );
     if (confirm != true) return;
+
     setState(() => _isLoading = true);
     try {
-      await supabase.schema('ursaevent').from('transaksis').update({'status': 'refund'}).eq('id_transaksi', _trx['id_transaksi']);
-      setState(() { _trx['status'] = 'refund'; _isLoading = false; });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Refund berhasil diproses!'), backgroundColor: Colors.teal));
+      // UPLOAD BUKTI REFUND KE STORAGE
+      final fileName = 'refund_${_trx['id_transaksi']}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final bytes = await _buktiRefundFile!.readAsBytes();
+      await supabase.storage.from('bukti-bayar').uploadBinary(fileName, bytes);
+      final urlBuktiRefund = supabase.storage.from('bukti-bayar').getPublicUrl(fileName);
+
+      // UPDATE STATUS + BUKTI REFUND
+      await supabase
+          .schema('ursaevent')
+          .from('transaksis')
+          .update({
+        'status': 'refund',
+        'bukti_refund': urlBuktiRefund,
+      })
+          .eq('id_transaksi', _trx['id_transaksi']);
+
+      setState(() {
+        _trx['status'] = 'refund';
+        _trx['bukti_refund'] = urlBuktiRefund;
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Refund berhasil diproses!'), backgroundColor: Colors.teal),
+        );
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal proses refund: $e')));
     }
   }
 
-  void _lihatBuktiBayar(String url) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => _BuktiBayarViewer(imageUrl: url)));
+  void _lihatGambar(String url, String title) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => _GambarViewer(imageUrl: url, title: title)),
+    );
   }
 
   Widget _infoRow(IconData icon, String label, String value) {
@@ -175,12 +268,50 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
     );
   }
 
+  Widget _buktiFotoWidget(String url, String title) {
+    return GestureDetector(
+      onTap: () => _lihatGambar(url, title),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: CachedNetworkImage(
+              imageUrl: url,
+              height: 200,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(height: 200, color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator())),
+              errorWidget: (_, __, ___) => Container(height: 200, color: Colors.grey.shade200, child: const Icon(Icons.broken_image, size: 48, color: Colors.grey)),
+            ),
+          ),
+          Positioned(
+            bottom: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.zoom_in, size: 14, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text('Tap untuk perbesar', style: TextStyle(color: Colors.white, fontSize: 11)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = _trx['status'] as String?;
     final event = _trx['event'] as Map<String, dynamic>?;
     final tiket = _trx['tikets'] as Map<String, dynamic>?;
     final buktiBayar = _trx['bukti_bayar'] as String?;
+    final buktiRefund = _trx['bukti_refund'] as String?;
     final isMenunggu = status == 'menunggu konfirmasi';
     final isRefundDiajukan = status == 'refund diajukan';
 
@@ -190,6 +321,7 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
         backgroundColor: const Color(0xFFD32F2F),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
+      backgroundColor: Colors.grey.shade100,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFD32F2F)))
           : SingleChildScrollView(
@@ -197,55 +329,50 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // STATUS BADGE
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _statusColor(status).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _statusColor(status).withOpacity(0.3)),
-                ),
-                child: Text(
-                  (status ?? '-').toUpperCase(),
-                  style: TextStyle(color: _statusColor(status), fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1),
-                ),
+
+            // STATUS
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _statusColor(status).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _statusColor(status).withOpacity(0.3)),
               ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // INFO TRANSAKSI
-            _sectionCard(
-              title: 'Informasi Transaksi',
-              icon: Icons.receipt_long_outlined,
-              children: [
-                _infoRow(Icons.tag, 'ID Transaksi', _trx['id_transaksi'] ?? '-'),
-                const SizedBox(height: 12),
-                _infoRow(Icons.calendar_today_outlined, 'Tanggal', _trx['tanggal'] ?? '-'),
-                const SizedBox(height: 12),
-                _infoRow(Icons.confirmation_number_outlined, 'Qty', '${_trx['qty'] ?? 1} tiket'),
-                const SizedBox(height: 12),
-                _infoRow(Icons.payments_outlined, 'Total Pembayaran', _formatRupiah(_trx['sub_total'])),
-              ],
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: _statusColor(status)),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Status Transaksi', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        status ?? '-',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _statusColor(status)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 12),
 
-            // INFO EVENT
+            // INFO TRANSAKSI
             _sectionCard(
-              title: 'Informasi Event',
-              icon: Icons.event_outlined,
+              title: 'Info Transaksi',
+              icon: Icons.receipt_long_outlined,
               children: [
-                _infoRow(Icons.celebration_outlined, 'Nama Event', event?['nama_event'] ?? '-'),
-                const SizedBox(height: 12),
-                _infoRow(Icons.calendar_month_outlined, 'Tanggal Event', event?['tanggal'] ?? '-'),
-                const SizedBox(height: 12),
-                _infoRow(Icons.confirmation_number_outlined, 'Nama Tiket', tiket?['nama_tiket'] ?? '-'),
-                const SizedBox(height: 12),
-                _infoRow(Icons.category_outlined, 'Kategori', tiket?['kategori'] ?? '-'),
-                const SizedBox(height: 12),
-                _infoRow(Icons.sell_outlined, 'Harga Satuan', _formatRupiah(tiket?['harga'])),
+                _infoRow(Icons.tag, 'ID Transaksi', _trx['id_transaksi'] ?? '-'),
+                const SizedBox(height: 10),
+                _infoRow(Icons.event_outlined, 'Event', event?['nama_event'] ?? '-'),
+                const SizedBox(height: 10),
+                _infoRow(Icons.confirmation_number_outlined, 'Tiket', '${tiket?['nama_tiket'] ?? '-'} • ${tiket?['kategori'] ?? '-'}'),
+                const SizedBox(height: 10),
+                _infoRow(Icons.calendar_today_outlined, 'Tanggal', _trx['tanggal'] ?? '-'),
+                const SizedBox(height: 10),
+                _infoRow(Icons.payments_outlined, 'Total', _formatRupiah(_trx['sub_total'])),
               ],
             ),
 
@@ -271,40 +398,7 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
                     ),
                   )
                 else
-                  GestureDetector(
-                    onTap: () => _lihatBuktiBayar(buktiBayar),
-                    child: Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: CachedNetworkImage(
-                            imageUrl: buktiBayar,
-                            height: 200,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(height: 200, color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator())),
-                            errorWidget: (_, __, ___) => Container(height: 200, color: Colors.grey.shade200, child: const Icon(Icons.broken_image, size: 48, color: Colors.grey)),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 8,
-                          right: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.zoom_in, size: 14, color: Colors.white),
-                                SizedBox(width: 4),
-                                Text('Tap untuk perbesar', style: TextStyle(color: Colors.white, fontSize: 11)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buktiFotoWidget(buktiBayar, 'Bukti Pembayaran'),
               ],
             ),
 
@@ -338,7 +432,7 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       icon: const Icon(Icons.check_circle_outline, size: 18),
-                      label: const Text('Konfirmasi Pembayaran', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const Text('Konfirmasi', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
@@ -369,6 +463,44 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // UPLOAD BUKTI REFUND
+                  const Text('Upload Bukti Transfer Refund', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: _pickBuktiRefund,
+                    child: Container(
+                      width: double.infinity,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: _buktiRefundFile != null
+                          ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(_buktiRefundFile!, fit: BoxFit.cover),
+                      )
+                          : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.upload_file_outlined, size: 40, color: Colors.grey),
+                          SizedBox(height: 8),
+                          Text('Tap untuk pilih foto', style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (_buktiRefundFile != null) ...[
+                    const SizedBox(height: 4),
+                    TextButton.icon(
+                      onPressed: _pickBuktiRefund,
+                      icon: const Icon(Icons.refresh, size: 14),
+                      label: const Text('Ganti Foto'),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -388,6 +520,16 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
               ),
             ],
 
+            // BUKTI REFUND (kalau sudah diproses)
+            if (status == 'refund' && buktiRefund != null) ...[
+              const SizedBox(height: 12),
+              _sectionCard(
+                title: 'Bukti Transfer Refund',
+                icon: Icons.replay_outlined,
+                children: [_buktiFotoWidget(buktiRefund, 'Bukti Refund')],
+              ),
+            ],
+
             const SizedBox(height: 30),
           ],
         ),
@@ -397,9 +539,10 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
 }
 
 // FULLSCREEN VIEWER
-class _BuktiBayarViewer extends StatelessWidget {
+class _GambarViewer extends StatelessWidget {
   final String imageUrl;
-  const _BuktiBayarViewer({required this.imageUrl});
+  final String title;
+  const _GambarViewer({required this.imageUrl, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -408,7 +551,7 @@ class _BuktiBayarViewer extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Bukti Pembayaran', style: TextStyle(color: Colors.white)),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
       ),
       body: Center(
         child: InteractiveViewer(

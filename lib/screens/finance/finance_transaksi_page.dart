@@ -18,8 +18,7 @@ class _FinanceTransaksiPageState extends State<FinanceTransaksiPage>
   final List<String> _tabs = [
     'Semua',
     'Menunggu',
-    'Dikonfirmasi',
-    'Terkirim',
+    'Aktif',
     'Refund',
     'Cancel',
   ];
@@ -67,10 +66,9 @@ class _FinanceTransaksiPageState extends State<FinanceTransaksiPage>
     if (tabIndex == 0) return _transaksi;
     final Map<int, List<String>> filterMap = {
       1: ['menunggu konfirmasi'],
-      2: ['dikonfirmasi'],
-      3: ['tiket dikirim'],
-      4: ['refund', 'refund diajukan'],
-      5: ['cancel'],
+      2: ['aktif'],
+      3: ['refund', 'refund diajukan'],
+      4: ['cancel'],
     };
     final statuses = filterMap[tabIndex] ?? [];
     return _transaksi.where((t) => statuses.contains(t['status'])).toList();
@@ -81,7 +79,7 @@ class _FinanceTransaksiPageState extends State<FinanceTransaksiPage>
       case 'holding': return Colors.purple;
       case 'menunggu konfirmasi': return Colors.orange;
       case 'dikonfirmasi': return Colors.blue;
-      case 'tiket dikirim': return Colors.green;
+      case 'aktif': return Colors.green;
       case 'cancel': return Colors.red;
       case 'refund':
       case 'refund diajukan': return Colors.teal;
@@ -94,7 +92,7 @@ class _FinanceTransaksiPageState extends State<FinanceTransaksiPage>
       case 'holding': return Icons.timer_outlined;
       case 'menunggu konfirmasi': return Icons.hourglass_empty_outlined;
       case 'dikonfirmasi': return Icons.check_circle_outline;
-      case 'tiket dikirim': return Icons.confirmation_number_outlined;
+      case 'aktif': return Icons.confirmation_number_outlined;
       case 'cancel': return Icons.cancel_outlined;
       case 'refund':
       case 'refund diajukan': return Icons.replay_outlined;
