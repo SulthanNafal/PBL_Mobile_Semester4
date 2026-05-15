@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import 'user_refund_page.dart';
+import 'user_detail_transaksi_page.dart';
 
 class UserTransaksiPage extends StatefulWidget {
   const UserTransaksiPage({super.key});
@@ -143,14 +144,28 @@ class _UserTransaksiPageState extends State<UserTransaksiPage> {
             final tiket = trx['tikets'] as Map<String, dynamic>?;
             final buktiRefund = trx['bukti_refund'] as String?;
 
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            return InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: status == 'aktif'
+                    ? () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DetailTransaksiPage(trx: trx),
+                    ),
+                  );
+                }
+                    : null,
+                child: Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
 
                     // STATUS + ID
                     Row(
@@ -290,6 +305,7 @@ class _UserTransaksiPageState extends State<UserTransaksiPage> {
                   ],
                 ),
               ),
+                ),
             );
           },
         ),

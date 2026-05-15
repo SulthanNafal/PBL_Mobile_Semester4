@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../routes/app_routes.dart';
+import 'dart:io';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -85,25 +86,38 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       } else {
-        // =========================
-        // LOGIN FAILED
-        // =========================
+
+        String errorMessage = result.toString();
+
+        // ERROR INTERNET / HOST / KUOTA
+        if (errorMessage.contains('SocketException') ||
+            errorMessage.contains('Failed host lookup') ||
+            errorMessage.contains('ClientException')) {
+
+          errorMessage = "Silahkan nyalakan internet / kuota anda";
+        }
+
         _showPopup(
           title: "Login Gagal",
-          message: result.toString(),
+          message: errorMessage,
         );
       }
     } catch (e) {
-      _showPopup(
-        title: "Error",
-        message: "Terjadi kesalahan sistem\n$e",
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+
+      String errorMessage = "Terjadi kesalahan sistem";
+
+      // ERROR INTERNET / KUOTA / HOST
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Failed host lookup') ||
+          e.toString().contains('ClientException')) {
+
+        errorMessage = "Silahkan nyalakan internet / kuota anda";
       }
+
+      _showPopup(
+        title: "Login Gagal",
+        message: errorMessage,
+      );
     }
   }
 
