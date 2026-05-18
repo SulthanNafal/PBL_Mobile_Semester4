@@ -9,10 +9,16 @@ class UserBookingPage extends StatefulWidget {
   final Map<String, dynamic> tiket;
   final Map<String, dynamic> event;
 
+  // MODE RESUME: kalau ada transaksi holding yang belum expired
+  final String? existingIdTransaksi;
+  final DateTime? existingExpiredAt;
+
   const UserBookingPage({
     super.key,
     required this.tiket,
     required this.event,
+    this.existingIdTransaksi,
+    this.existingExpiredAt,
   });
 
   @override
@@ -29,11 +35,15 @@ class _UserBookingPageState extends State<UserBookingPage> {
   String _username = '-';
   String _nama = '-';
 
+  bool get _isResumeMode => widget.existingIdTransaksi != null && widget.existingExpiredAt != null;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_sudahBuat) {
+      if (_isResumeMode) {
+        _resumeTransaksi();
+      } else if (!_sudahBuat) {
         _buatTransaksi();
       }
     });
@@ -99,7 +109,109 @@ class _UserBookingPageState extends State<UserBookingPage> {
   }
 
   // =========================
-  // BUAT TRANSAKSI + HOLD KUOTA
+  // RESUME TRANSAKSI YANG ADA
+  // =========================
+  Future<void> _resumeTransaksi() async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) {
+        Navigator.pop(context);
+        return;
+      }
+
+      // FETCH USERNAME & NAMA
+      final userData = await supabase
+          .schema('ursaevent')
+          .from('users')
+          .select('username, name')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (userData != null) {
+        _username = userData['username'] ?? '-';
+        _nama = userData['name'] ?? '-';
+      }
+
+      // HITUNG SISA WAKTU DARI expired_at
+      final now = DateTime.now();
+      final expiredAt = widget.existingExpiredAt!;
+      final sisaDetik = expiredAt.difference(now).inSeconds;
+
+      if (sisaDetik <= 0) {
+        // Sudah expired, cancel langsung
+        await _cancelExpiredTransaksi(widget.existingIdTransaksi!);
+        return;
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _idTransaksi = widget.existingIdTransaksi;
+        _sisaDetik = sisaDetik;
+        _isLoading = false;
+      });
+
+      _startTimer();
+    } catch (e) {
+      debugPrint('ERROR RESUME TRANSAKSI: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memuat transaksi: $e')),
+        );
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  // =========================
+  // CANCEL TRANSAKSI YANG EXPIRED
+  // =========================
+  Future<void> _cancelExpiredTransaksi(String idTransaksi) async {
+    try {
+      await supabase
+          .schema('ursaevent')
+          .from('transaksis')
+          .delete()
+          .eq('id_transaksi', idTransaksi);
+
+      await _incrementKuota();
+    } catch (e) {
+      debugPrint('ERROR CANCEL EXPIRED: $e');
+    }
+
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          title: const Text('Waktu Habis!'),
+          content: const Text(
+            'Batas waktu pemesanan telah habis.\nTransaksi dibatalkan otomatis dan kuota dikembalikan.',
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.user,
+                      (route) => false,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD32F2F),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Kembali ke Beranda'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  // =========================
+  // BUAT TRANSAKSI BARU
   // =========================
   Future<void> _buatTransaksi() async {
     if (_sudahBuat) return;
@@ -184,7 +296,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
   }
 
   // =========================
-  // TIMEOUT → HAPUS TRANSAKSI (HOLDING)
+  // TIMEOUT → HAPUS TRANSAKSI
   // =========================
   Future<void> _handleTimeout() async {
     if (_isTimeout) return;
@@ -194,7 +306,6 @@ class _UserBookingPageState extends State<UserBookingPage> {
     try {
       if (_idTransaksi == null) return;
 
-      // CEK STATUS TRANSAKSI DULU
       final transaksi = await supabase
           .schema('ursaevent')
           .from('transaksis')
@@ -204,14 +315,12 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
       if (transaksi['status'] != 'holding') return;
 
-      // HAPUS TRANSAKSI DARI DATABASE (masih holding = belum bayar)
       await supabase
           .schema('ursaevent')
           .from('transaksis')
           .delete()
           .eq('id_transaksi', _idTransaksi!);
 
-      // KEMBALIKAN KUOTA
       await _incrementKuota();
       debugPrint('=== TIMEOUT → TRANSAKSI DIHAPUS & KUOTA DIKEMBALIKAN ===');
     } catch (e) {
@@ -250,7 +359,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
   }
 
   // =========================
-  // BATAL MANUAL → HAPUS TRANSAKSI (HOLDING)
+  // BATAL MANUAL
   // =========================
   Future<void> _handleBatal() async {
     final confirm = await showDialog<bool>(
@@ -277,10 +386,8 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
     try {
       _timer?.cancel();
-
       if (_idTransaksi == null) return;
 
-      // CEK STATUS TRANSAKSI DULU
       final transaksi = await supabase
           .schema('ursaevent')
           .from('transaksis')
@@ -290,14 +397,12 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
       if (transaksi['status'] != 'holding') return;
 
-      // HAPUS TRANSAKSI DARI DATABASE (masih holding = belum bayar)
       await supabase
           .schema('ursaevent')
           .from('transaksis')
           .delete()
           .eq('id_transaksi', _idTransaksi!);
 
-      // KEMBALIKAN KUOTA
       await _incrementKuota();
       debugPrint('=== BATAL → TRANSAKSI DIHAPUS & KUOTA DIKEMBALIKAN ===');
 
@@ -343,9 +448,9 @@ class _UserBookingPageState extends State<UserBookingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Booking Tiket',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          _isResumeMode ? 'Lanjutkan Pembayaran' : 'Booking Tiket',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFFD32F2F),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -368,9 +473,33 @@ class _UserBookingPageState extends State<UserBookingPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            // =========================
+            // INFO RESUME
+            if (_isResumeMode) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Kamu punya pembayaran yang belum selesai. Selesaikan sebelum waktu habis!',
+                        style: TextStyle(fontSize: 12, color: Colors.orange.shade700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // COUNTDOWN TIMER
-            // =========================
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -407,9 +536,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
             const SizedBox(height: 24),
 
-            // =========================
             // ID TRANSAKSI
-            // =========================
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -440,9 +567,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
             const SizedBox(height: 16),
 
-            // =========================
             // DETAIL PEMESAN
-            // =========================
             const Text(
               'Detail Pemesan',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -466,9 +591,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
             const SizedBox(height: 24),
 
-            // =========================
             // DETAIL PESANAN
-            // =========================
             const Text(
               'Detail Pesanan',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -501,9 +624,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
             const SizedBox(height: 24),
 
-            // =========================
             // INFO PEMBAYARAN
-            // =========================
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -521,10 +642,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
                       SizedBox(width: 8),
                       Text(
                         'Informasi Pembayaran',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
                       ),
                     ],
                   ),
@@ -542,9 +660,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
             const SizedBox(height: 32),
 
-            // =========================
             // TOMBOL UPLOAD BUKTI
-            // =========================
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -567,9 +683,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFD32F2F),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 icon: const Icon(Icons.upload_outlined),
                 label: const Text(
@@ -581,9 +695,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
             const SizedBox(height: 12),
 
-            // =========================
             // TOMBOL BATAL
-            // =========================
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -591,9 +703,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
                 onPressed: _isTimeout ? null : _handleBatal,
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Colors.grey),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 child: const Text(
                   'Batalkan Pesanan',
