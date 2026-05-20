@@ -23,11 +23,9 @@ class AuthController {
   // 📝 REGISTER
   // ==============================
   Future<String?> register({
-
     required String username,
     required String email,
     required String password,
-
   }) async {
 
     try {
@@ -35,10 +33,10 @@ class AuthController {
       final hashed =
       normalizePassword(password);
 
-      // ==============================
+      // ======================
       // CEK USERNAME
-      // ==============================
-      final existingUsername =
+      // ======================
+      final usernameExist =
       await supabase
           .schema('ursaevent')
           .from('users')
@@ -49,34 +47,14 @@ class AuthController {
       )
           .maybeSingle();
 
-      if (existingUsername != null) {
-
+      if (usernameExist != null) {
         return "Username sudah digunakan";
       }
 
-      // ==============================
-      // CEK EMAIL
-      // ==============================
-      final existingEmail =
-      await supabase
-          .schema('ursaevent')
-          .from('users')
-          .select()
-          .eq(
-        'email',
-        email.trim(),
-      )
-          .maybeSingle();
-
-      if (existingEmail != null) {
-
-        return "Email sudah digunakan";
-      }
-
-      // ==============================
+      // ======================
       // REGISTER AUTH
-      // ==============================
-      final res =
+      // ======================
+      final response =
       await supabase.auth.signUp(
 
         email: email.trim(),
@@ -87,43 +65,62 @@ class AuthController {
         'com.ursaevent.app://login-callback/',
       );
 
-      final user = res.user;
+      final user =
+          response.user;
 
       if (user == null) {
-
         return "Gagal membuat akun";
       }
 
-      // ==============================
-      // INSERT USERS TABLE
-      // ==============================
+      // ======================
+      // CEK USER DI TABEL
+      // ======================
+      final existingUser =
       await supabase
           .schema('ursaevent')
           .from('users')
-          .insert({
+          .select()
+          .eq(
+        'id',
+        user.id,
+      )
+          .maybeSingle();
 
-        'id': user.id,
+      // ======================
+      // INSERT USER BARU
+      // ======================
+      if (existingUser == null) {
 
-        'username':
-        username.trim(),
+        await supabase
+            .schema('ursaevent')
+            .from('users')
+            .insert({
 
-        'email':
-        email.trim(),
+          'id': user.id,
 
-        'password':
-        hashed,
+          'username':
+          username.trim(),
 
-        'level':
-        'user',
+          'email':
+          email.trim(),
 
-        'created_at':
-        DateTime.now()
-            .toIso8601String(),
-      });
+          'password':
+          hashed,
+
+          'level':
+          'user',
+
+          'created_at':
+          DateTime.now()
+              .toIso8601String(),
+        });
+      }
 
       return "success";
 
-    } on AuthException catch (e) {
+    }
+
+    on AuthException catch (e) {
 
       final error =
       e.message.toLowerCase();
@@ -131,14 +128,17 @@ class AuthController {
       if (error.contains(
           'already registered')) {
 
-        return "Email sudah digunakan";
+        return
+          "Email sudah terdaftar";
       }
 
-      return "Registrasi gagal";
+      return e.message;
+    }
 
-    } catch (e) {
+    catch (e) {
 
-      return "Terjadi kesalahan sistem";
+      return
+        "Terjadi kesalahan sistem : $e";
     }
   }
 

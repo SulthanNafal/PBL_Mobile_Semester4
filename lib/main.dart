@@ -4,69 +4,43 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'routes/app_routes.dart';
 
 void main() async {
-
-  // =========================
-  // INIT FLUTTER
-  // =========================
   WidgetsFlutterBinding.ensureInitialized();
 
-  // =========================
-  // INIT SUPABASE
-  // =========================
   await Supabase.initialize(
-
-    url:
-    'https://bnhfjxxyxpwpwkmorlcg.supabase.co',
-
-    anonKey:
-    'sb_publishable_q5tTOYyPPiEXxmgNSekeiw_BzhOnQmk',
+    url: 'https://bnhfjxxyxpwpwkmorlcg.supabase.co',
+    anonKey: 'sb_publishable_q5tTOYyPPiEXxmgNSekeiw_BzhOnQmk',
   );
 
   runApp(const MyApp());
 }
 
-// =========================
-// GLOBAL SUPABASE CLIENT
-// =========================
-final supabase =
-    Supabase.instance.client;
+// GLOBAL SUPABASE
+final supabase = Supabase.instance.client;
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() =>
-      _MyAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState
-    extends State<MyApp> {
-
-  // =========================
-  // NAVIGATOR KEY
-  // =========================
-  final GlobalKey<NavigatorState>
-  navigatorKey =
+class _MyAppState extends State<MyApp> {
+  final GlobalKey<NavigatorState> navigatorKey =
   GlobalKey<NavigatorState>();
 
   @override
   void initState() {
-
     super.initState();
 
-    // =========================
-    // AUTH STATE LISTENER
-    // =========================
+    // LISTENER AUTH
     supabase.auth.onAuthStateChange.listen(
-
           (data) async {
 
-        final event =
-            data.event;
+        final event = data.event;
 
-        // =========================
-        // PASSWORD RECOVERY
-        // =========================
+        // ========================
+        // PASSWORD RESET
+        // ========================
         if (event ==
             AuthChangeEvent.passwordRecovery) {
 
@@ -74,11 +48,13 @@ class _MyAppState
               ?.pushNamed(
             AppRoutes.resetPassword,
           );
+
+          return;
         }
 
-        // =========================
-        // LOGIN GOOGLE ONLY
-        // =========================
+        // ========================
+        // LOGIN BERHASIL
+        // ========================
         if (event ==
             AuthChangeEvent.signedIn) {
 
@@ -87,32 +63,27 @@ class _MyAppState
 
           if (user == null) return;
 
-          // =========================
-          // CEK PROVIDER LOGIN
-          // =========================
+          // ambil provider login
           final provider =
           user.appMetadata['provider'];
 
-          // HANYA LOGIN GOOGLE
-          if (provider != 'google') {
-            return;
-          }
-
-          // =========================
-          // CEK USER DATABASE
-          // =========================
           dynamic userData =
           await supabase
               .schema('ursaevent')
               .from('users')
               .select()
-              .eq('id', user.id)
+              .eq(
+            'id',
+            user.id,
+          )
               .maybeSingle();
 
-          // =========================
-          // INSERT USER BARU GOOGLE
-          // =========================
-          if (userData == null) {
+          // ========================
+          // JIKA LOGIN GOOGLE DAN
+          // USER BELUM ADA
+          // ========================
+          if (provider == 'google' &&
+              userData == null) {
 
             await supabase
                 .schema('ursaevent')
@@ -129,25 +100,69 @@ class _MyAppState
               'email':
               user.email,
 
-              'password':
-              '-',
+              'password': '-',
 
-              // DEFAULT ROLE
-              'level':
-              'user',
+              'level': 'user',
 
               'created_at':
               DateTime.now()
                   .toIso8601String(),
             });
+
+            userData =
+            await supabase
+                .schema('ursaevent')
+                .from('users')
+                .select()
+                .eq(
+              'id',
+              user.id,
+            )
+                .single();
           }
 
-          // =========================
-          // REDIRECT DASHBOARD USER
-          // =========================
+          // ========================
+          // USER EMAIL BELUM ADA
+          // ========================
+          if (userData == null) return;
+
+          // LEVEL USER
+          final level =
+              userData['level'] ?? 'user';
+
+          String route =
+              AppRoutes.user;
+
+          switch(level){
+
+            case 'superadmin':
+              route =
+                  AppRoutes.superadmin;
+              break;
+
+            case 'admin':
+              route =
+                  AppRoutes.admin;
+              break;
+
+            case 'crew':
+              route =
+                  AppRoutes.crew;
+              break;
+
+            case 'finance':
+              route =
+                  AppRoutes.finance;
+              break;
+
+            default:
+              route =
+                  AppRoutes.user;
+          }
+
           navigatorKey.currentState
               ?.pushReplacementNamed(
-            AppRoutes.user,
+            route,
           );
         }
       },
@@ -158,34 +173,24 @@ class _MyAppState
   Widget build(BuildContext context) {
 
     return MaterialApp(
-
       navigatorKey: navigatorKey,
 
-      debugShowCheckedModeBanner:
-      false,
+      debugShowCheckedModeBanner: false,
 
       title: 'Ursa Event',
 
       theme: ThemeData(
-
         colorScheme:
         ColorScheme.fromSeed(
           seedColor:
           const Color(0xFFF24E4E),
         ),
-
         useMaterial3: true,
       ),
 
-      // =========================
-      // DEFAULT PAGE
-      // =========================
       initialRoute:
       AppRoutes.login,
 
-      // =========================
-      // ROUTES
-      // =========================
       onGenerateRoute:
       AppRoutes.generateRoute,
     );
