@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 
 import '../utils/hash.dart';
+import '../main.dart'; // TAMBAHKAN INI
 
 class AuthController {
 
@@ -154,23 +155,14 @@ class AuthController {
 
     try {
 
-      // ==============================
-      // HASH PASSWORD CUSTOM
-      // ==============================
       final hashedPassword =
       normalizePassword(password);
 
-      // ==============================
-      // DETEKSI EMAIL / USERNAME
-      // ==============================
       final isEmail =
       loginInput.contains('@');
 
       dynamic userData;
 
-      // ==============================
-      // LOGIN VIA EMAIL
-      // ==============================
       if (isEmail) {
 
         userData =
@@ -190,9 +182,6 @@ class AuthController {
 
       } else {
 
-        // ==============================
-        // LOGIN VIA USERNAME
-        // ==============================
         userData =
         await supabase
             .schema('ursaevent')
@@ -209,18 +198,12 @@ class AuthController {
             .maybeSingle();
       }
 
-      // ==============================
-      // USER TIDAK DITEMUKAN
-      // ==============================
       if (userData == null) {
 
         return
           "Username/Email atau Password salah";
       }
 
-      // ==============================
-      // LOGIN SUPABASE AUTH
-      // ==============================
       await supabase.auth
           .signInWithPassword(
 
@@ -229,9 +212,6 @@ class AuthController {
         password: password.trim(),
       );
 
-      // ==============================
-      // RETURN USER DATA
-      // ==============================
       return {
 
         'status': 'success',
@@ -248,9 +228,6 @@ class AuthController {
       final error =
       e.message.toLowerCase();
 
-      // ==============================
-      // INVALID LOGIN
-      // ==============================
       if (error.contains(
           'invalid login credentials')) {
 
@@ -258,9 +235,6 @@ class AuthController {
           "Username/Email atau Password salah";
       }
 
-      // ==============================
-      // EMAIL BELUM VERIFIKASI
-      // ==============================
       if (error.contains(
           'email not confirmed')) {
 
@@ -268,9 +242,6 @@ class AuthController {
           "Email belum diverifikasi";
       }
 
-      // ==============================
-      // TOO MANY REQUEST
-      // ==============================
       if (error.contains(
           'too many requests')) {
 
@@ -290,11 +261,13 @@ class AuthController {
   // ==============================
   // 🔵 LOGIN GOOGLE
   // ==============================
-  Future<dynamic> loginWithGoogle() async {
+  Future<void> loginWithGoogle() async {
 
     try {
 
-      // LOGIN GOOGLE
+      // FLAG LOGIN GOOGLE
+      isGoogleAuth = true;
+
       await supabase.auth.signInWithOAuth(
 
         OAuthProvider.google,
@@ -305,104 +278,21 @@ class AuthController {
             : 'com.ursaevent.app://login-callback/',
       );
 
-      // TUNGGU SESSION
-      await Future.delayed(
-        const Duration(seconds: 3),
-      );
-
-      // AMBIL USER AUTH
-      final user =
-          supabase.auth.currentUser;
-
-      if (user == null) {
-
-        return
-          "Login Google gagal";
-      }
-
-      // ==============================
-      // CEK USER DI DATABASE
-      // ==============================
-      dynamic userData =
-      await supabase
-          .schema('ursaevent')
-          .from('users')
-          .select()
-          .eq(
-        'id',
-        user.id,
-      )
-          .maybeSingle();
-
-      // ==============================
-      // JIKA USER BELUM ADA
-      // ==============================
-      if (userData == null) {
-
-        await supabase
-            .schema('ursaevent')
-            .from('users')
-            .insert({
-
-          'id': user.id,
-
-          'username':
-          user.userMetadata?['name'] ??
-              user.email
-                  ?.split('@')[0],
-
-          'email':
-          user.email,
-
-          'password':
-          '-',
-
-          // DEFAULT ROLE
-          'level':
-          'user',
-
-          'created_at':
-          DateTime.now()
-              .toIso8601String(),
-        });
-
-        // AMBIL DATA USER BARU
-        userData =
-        await supabase
-            .schema('ursaevent')
-            .from('users')
-            .select()
-            .eq(
-          'id',
-          user.id,
-        )
-            .single();
-      }
-
-      // ==============================
-      // RETURN SUCCESS
-      // ==============================
-      return {
-
-        'status':
-        'success',
-
-        'level':
-        userData['level'],
-
-        'user':
-        userData,
-      };
-
     } on AuthException catch (e) {
 
-      return
-        "Login Google gagal\n${e.message}";
+      isGoogleAuth = false;
+
+      throw Exception(
+        "Login Google gagal : ${e.message}",
+      );
 
     } catch (e) {
 
-      return
-        "Terjadi kesalahan sistem\n$e";
+      isGoogleAuth = false;
+
+      throw Exception(
+        "Terjadi kesalahan sistem : $e",
+      );
     }
   }
 
@@ -410,9 +300,7 @@ class AuthController {
   // 📩 RESET PASSWORD EMAIL
   // ==============================
   Future<String?> sendResetPasswordEmail(
-
       String email,
-
       ) async {
 
     try {
@@ -434,9 +322,6 @@ class AuthController {
           "Email tidak ditemukan";
       }
 
-      // ==============================
-      // SEND RESET EMAIL
-      // ==============================
       await supabase.auth
           .resetPasswordForEmail(
 
@@ -447,21 +332,6 @@ class AuthController {
       );
 
       return "success";
-
-    } on AuthException catch (e) {
-
-      final error =
-      e.message.toLowerCase();
-
-      if (error.contains(
-          'email rate limit exceeded')) {
-
-        return
-          "Terlalu banyak permintaan";
-      }
-
-      return
-        "Gagal mengirim link reset password";
 
     } catch (e) {
 
@@ -474,9 +344,7 @@ class AuthController {
   // 🔑 UPDATE PASSWORD
   // ==============================
   Future<String?> updatePassword({
-
     required String newPassword,
-
   }) async {
 
     try {
@@ -486,9 +354,6 @@ class AuthController {
         newPassword,
       );
 
-      // ==============================
-      // SESSION USER
-      // ==============================
       final user =
           supabase.auth.currentUser;
 
@@ -498,9 +363,6 @@ class AuthController {
           "Session user tidak ditemukan";
       }
 
-      // ==============================
-      // UPDATE AUTH PASSWORD
-      // ==============================
       await supabase.auth.updateUser(
 
         UserAttributes(
@@ -509,9 +371,6 @@ class AuthController {
         ),
       );
 
-      // ==============================
-      // UPDATE USERS TABLE
-      // ==============================
       await supabase
           .schema('ursaevent')
           .from('users')
@@ -527,21 +386,6 @@ class AuthController {
 
       return "success";
 
-    } on AuthException catch (e) {
-
-      final error =
-      e.message.toLowerCase();
-
-      if (error.contains(
-          'same password')) {
-
-        return
-          "Password baru tidak boleh sama";
-      }
-
-      return
-        "Gagal mengubah password";
-
     } catch (e) {
 
       return
@@ -553,6 +397,8 @@ class AuthController {
   // 🚪 LOGOUT
   // ==============================
   Future<void> logout() async {
+
+    isGoogleAuth = false;
 
     await supabase.auth.signOut();
   }

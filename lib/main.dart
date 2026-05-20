@@ -14,121 +14,110 @@ void main() async {
   runApp(const MyApp());
 }
 
+// =========================
 // GLOBAL SUPABASE
-final supabase = Supabase.instance.client;
+// =========================
+final supabase =
+    Supabase.instance.client;
+
+// FLAG LOGIN GOOGLE
+bool isGoogleAuth = false;
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<MyApp> createState() =>
+      _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  final GlobalKey<NavigatorState> navigatorKey =
+class _MyAppState
+    extends State<MyApp> {
+
+  final GlobalKey<NavigatorState>
+  navigatorKey =
   GlobalKey<NavigatorState>();
 
   @override
   void initState() {
     super.initState();
 
+    // =========================
     // LISTENER AUTH
-    supabase.auth.onAuthStateChange.listen(
+    // =========================
+    supabase.auth
+        .onAuthStateChange
+        .listen(
+
           (data) async {
 
-        final event = data.event;
+        final event =
+            data.event;
 
-        // ========================
+        // =========================
         // PASSWORD RESET
-        // ========================
+        // =========================
         if (event ==
-            AuthChangeEvent.passwordRecovery) {
+            AuthChangeEvent
+                .passwordRecovery) {
 
           navigatorKey.currentState
               ?.pushNamed(
-            AppRoutes.resetPassword,
+            AppRoutes
+                .resetPassword,
           );
 
           return;
         }
 
-        // ========================
+        // =========================
         // LOGIN BERHASIL
-        // ========================
+        // =========================
         if (event ==
-            AuthChangeEvent.signedIn) {
+            AuthChangeEvent
+                .signedIn) {
 
           final user =
-              supabase.auth.currentUser;
+              supabase.auth
+                  .currentUser;
 
           if (user == null) return;
 
-          // ambil provider login
-          final provider =
-          user.appMetadata['provider'];
+          // =========================
+          // LOGIN GOOGLE
+          // =========================
+          if (isGoogleAuth) {
 
-          dynamic userData =
-          await supabase
-              .schema('ursaevent')
-              .from('users')
-              .select()
-              .eq(
-            'id',
-            user.id,
-          )
-              .maybeSingle();
+            // reset flag
+            isGoogleAuth = false;
 
-          // ========================
-          // JIKA LOGIN GOOGLE DAN
-          // USER BELUM ADA
-          // ========================
-          if (provider == 'google' &&
-              userData == null) {
+            navigatorKey
+                .currentState
+                ?.pushReplacementNamed(
+              AppRoutes.user,
+            );
 
-            await supabase
-                .schema('ursaevent')
-                .from('users')
-                .insert({
-
-              'id': user.id,
-
-              'username':
-              user.userMetadata?['name'] ??
-                  user.email
-                      ?.split('@')[0],
-
-              'email':
-              user.email,
-
-              'password': '-',
-
-              'level': 'user',
-
-              'created_at':
-              DateTime.now()
-                  .toIso8601String(),
-            });
-
-            userData =
-            await supabase
-                .schema('ursaevent')
-                .from('users')
-                .select()
-                .eq(
-              'id',
-              user.id,
-            )
-                .single();
+            return;
           }
 
-          // ========================
-          // USER EMAIL BELUM ADA
-          // ========================
-          if (userData == null) return;
+          // =========================
+          // LOGIN EMAIL BIASA
+          // =========================
+          final userData =
+          await supabase
+              .schema(
+              'ursaevent')
+              .from(
+              'users')
+              .select()
+              .eq(
+            'email',
+            user.email!,
+          )
+              .single();
 
-          // LEVEL USER
           final level =
-              userData['level'] ?? 'user';
+          userData['level'];
 
           String route =
               AppRoutes.user;
@@ -137,30 +126,36 @@ class _MyAppState extends State<MyApp> {
 
             case 'superadmin':
               route =
-                  AppRoutes.superadmin;
+                  AppRoutes
+                      .superadmin;
               break;
 
             case 'admin':
               route =
-                  AppRoutes.admin;
+                  AppRoutes
+                      .admin;
               break;
 
             case 'crew':
               route =
-                  AppRoutes.crew;
+                  AppRoutes
+                      .crew;
               break;
 
             case 'finance':
               route =
-                  AppRoutes.finance;
+                  AppRoutes
+                      .finance;
               break;
 
             default:
               route =
-                  AppRoutes.user;
+                  AppRoutes
+                      .user;
           }
 
-          navigatorKey.currentState
+          navigatorKey
+              .currentState
               ?.pushReplacementNamed(
             route,
           );
@@ -170,22 +165,35 @@ class _MyAppState extends State<MyApp> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context) {
 
     return MaterialApp(
-      navigatorKey: navigatorKey,
 
-      debugShowCheckedModeBanner: false,
+      navigatorKey:
+      navigatorKey,
 
-      title: 'Ursa Event',
+      debugShowCheckedModeBanner:
+      false,
 
-      theme: ThemeData(
+      title:
+      'Ursa Event',
+
+      theme:
+      ThemeData(
+
         colorScheme:
-        ColorScheme.fromSeed(
+        ColorScheme
+            .fromSeed(
+
           seedColor:
-          const Color(0xFFF24E4E),
+          const Color(
+            0xFFF24E4E,
+          ),
         ),
-        useMaterial3: true,
+
+        useMaterial3:
+        true,
       ),
 
       initialRoute:
