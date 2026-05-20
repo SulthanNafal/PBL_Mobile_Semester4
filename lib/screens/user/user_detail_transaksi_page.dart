@@ -1,5 +1,5 @@
-import 'package:barcode_widget/barcode_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class DetailTransaksiPage extends StatelessWidget {
   final Map<String, dynamic> trx;
@@ -84,7 +84,7 @@ class DetailTransaksiPage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // BARCODE
+            // QR TIKET
             Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -95,7 +95,7 @@ class DetailTransaksiPage extends StatelessWidget {
                   children: [
 
                     const Text(
-                      'Barcode Tiket',
+                      'QR Tiket',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -104,18 +104,17 @@ class DetailTransaksiPage extends StatelessWidget {
 
                     const SizedBox(height: 20),
 
-                    BarcodeWidget(
-                      barcode: Barcode.code128(),
+                    QrImageView(
                       data: trx['id_transaksi'] ?? '',
-                      width: double.infinity,
-                      height: 100,
-                      drawText: true,
+                      version: QrVersions.auto,
+                      size: 220,
+                      backgroundColor: Colors.white,
                     ),
 
                     const SizedBox(height: 12),
 
                     const Text(
-                      'Tunjukkan barcode ini kepada panitia saat masuk event',
+                      'Tunjukkan QR ini kepada panitia saat masuk event',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.grey,

@@ -23,7 +23,8 @@ class _LoginPageState extends State<LoginPage> {
   // LOGIN FUNCTION
   // =========================
   Future<void> _handleLogin() async {
-    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
+    if (_usernameController.text.isEmpty ||
+        _passwordController.text.isEmpty) {
       _showPopup(
         title: "Peringatan",
         message: "Username/Email dan Password wajib diisi!",
@@ -41,11 +42,9 @@ class _LoginPageState extends State<LoginPage> {
         _passwordController.text.trim(),
       );
 
-      // =========================
-      // LOGIN SUCCESS
-      // =========================
+      // LOGIN BERHASIL
       if (result != null && result is Map) {
-        String level = result['level'];
+        String level = result['level'] ?? 'user';
         String route = AppRoutes.user;
 
         switch (level) {
@@ -78,22 +77,26 @@ class _LoginPageState extends State<LoginPage> {
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  Navigator.pushReplacementNamed(context, route);
+                  Navigator.pushReplacementNamed(
+                    context,
+                    route,
+                  );
                 },
                 child: const Text("OK"),
               ),
             ],
           ),
         );
-      } else {
+      }
 
-        String errorMessage = result.toString();
+      // LOGIN GAGAL
+      else {
+        String errorMessage = result?.toString() ??
+            "Username atau password salah";
 
-        // ERROR INTERNET / HOST / KUOTA
         if (errorMessage.contains('SocketException') ||
             errorMessage.contains('Failed host lookup') ||
             errorMessage.contains('ClientException')) {
-
           errorMessage = "Silahkan nyalakan internet / kuota anda";
         }
 
@@ -103,21 +106,29 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
+      String errorMessage = e.toString();
 
-      String errorMessage = "Terjadi kesalahan sistem";
-
-      // ERROR INTERNET / KUOTA / HOST
-      if (e.toString().contains('SocketException') ||
-          e.toString().contains('Failed host lookup') ||
-          e.toString().contains('ClientException')) {
-
+      if (errorMessage.contains('SocketException') ||
+          errorMessage.contains('Failed host lookup') ||
+          errorMessage.contains('ClientException')) {
         errorMessage = "Silahkan nyalakan internet / kuota anda";
+      } else {
+        errorMessage = "Terjadi kesalahan sistem";
       }
 
       _showPopup(
         title: "Login Gagal",
         message: errorMessage,
       );
+    }
+
+    // INI YANG PENTING
+    finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
