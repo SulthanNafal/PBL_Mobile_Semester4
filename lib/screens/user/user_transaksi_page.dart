@@ -9,12 +9,18 @@ class UserTransaksiPage extends StatefulWidget {
   const UserTransaksiPage({super.key});
 
   @override
-  State<UserTransaksiPage> createState() => _UserTransaksiPageState();
+  State<UserTransaksiPage> createState() =>
+      _UserTransaksiPageState();
 }
 
-class _UserTransaksiPageState extends State<UserTransaksiPage> {
+class _UserTransaksiPageState
+    extends State<UserTransaksiPage> {
+
   List<Map<String, dynamic>> _transaksi = [];
   bool _isLoading = true;
+
+  // FILTER STATUS
+  String selectedStatus = 'aktif';
 
   @override
   void initState() {
@@ -24,7 +30,9 @@ class _UserTransaksiPageState extends State<UserTransaksiPage> {
 
   Future<void> _fetchTransaksi() async {
     try {
-      final user = supabase.auth.currentUser;
+      final user =
+          supabase.auth.currentUser;
+
       if (user == null) return;
 
       final data = await supabase
@@ -32,150 +40,236 @@ class _UserTransaksiPageState extends State<UserTransaksiPage> {
           .from('transaksis')
           .select('''
             *,
-            event:id_event(nama_event, tanggal),
-            tikets:id_tiket(nama_tiket, kategori, harga, id_event)
+            event:id_event(
+              nama_event,
+              tanggal
+            ),
+            tikets:id_tiket(
+              nama_tiket,
+              kategori,
+              harga,
+              id_event
+            )
           ''')
-          .eq('id_user', user.id)
-          .order('tanggal', ascending: false);
+          .eq(
+        'id_user',
+        user.id,
+      )
+          .order(
+        'updated_at',
+        ascending: false,
+      );
 
       setState(() {
-        _transaksi = List<Map<String, dynamic>>.from(data);
+        _transaksi =
+        List<Map<String,
+            dynamic>>.from(data);
+
         _isLoading = false;
       });
+
     } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memuat transaksi: $e')),
-        );
-      }
+
+      setState(() {
+        _isLoading = false;
+      });
+
     }
   }
 
-  // =========================
-  // HANDLE TAP TRANSAKSI HOLDING
-  // =========================
-  Future<void> _handleTapHolding(Map<String, dynamic> trx) async {
-    final expiredAtStr = trx['expired_at'] as String?;
+  // ===============================
+// HOLDING TIKET
+// ===============================
+
+  Future<void> _handleTapHolding(
+      Map<String, dynamic> trx,
+      ) async {
+
+    final expiredAtStr =
+    trx['expired_at']?.toString();
+
     if (expiredAtStr == null) return;
 
-    final expiredAt = DateTime.tryParse(expiredAtStr);
+    final expiredAt =
+    DateTime.tryParse(
+        expiredAtStr);
+
     if (expiredAt == null) return;
 
     final now = DateTime.now();
 
+    // jika waktu holding habis
     if (now.isAfter(expiredAt)) {
-      // Sudah expired, cancel dan kembalikan kuota
+
       try {
+
+        // hapus transaksi
         await supabase
             .schema('ursaevent')
             .from('transaksis')
             .delete()
-            .eq('id_transaksi', trx['id_transaksi']);
+            .eq(
+          'id_transaksi',
+          trx['id_transaksi'],
+        );
 
-        // Kurangi kuota via update langsung
-        final tiketData = await supabase
-            .schema('ursaevent')
-            .from('tikets')
-            .select('kuota')
-            .eq('id', trx['id_tiket'])
-            .single();
-
-        final kuota = tiketData['kuota'] ?? 0;
+        // ambil kuota tiket
+        final tiketData =
         await supabase
             .schema('ursaevent')
             .from('tikets')
-            .update({'kuota': kuota + 1})
-            .eq('id', trx['id_tiket']);
+            .select('kuota')
+            .eq(
+          'id',
+          trx['id_tiket'],
+        )
+            .single();
+
+        final kuota =
+            tiketData['kuota'] ?? 0;
+
+        // kembalikan kuota
+        await supabase
+            .schema('ursaevent')
+            .from('tikets')
+            .update({
+          'kuota': kuota + 1
+        })
+            .eq(
+          'id',
+          trx['id_tiket'],
+        );
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+
+          ScaffoldMessenger.of(
+              context)
+              .showSnackBar(
+
             const SnackBar(
-              content: Text('Transaksi sudah expired dan dibatalkan otomatis.'),
-              backgroundColor: Colors.red,
+              content: Text(
+                'Transaksi holding expired dan dibatalkan otomatis',
+              ),
+              backgroundColor:
+              Colors.red,
             ),
           );
+
           _fetchTransaksi();
         }
+
       } catch (e) {
-        debugPrint('ERROR CANCEL EXPIRED: $e');
+
+        debugPrint(
+            'ERROR HOLDING : $e'
+        );
+
       }
+
       return;
     }
 
-    // Belum expired, buka booking page dengan mode resume
-    final tiket = trx['tikets'] as Map<String, dynamic>? ?? {};
-    final event = trx['event'] as Map<String, dynamic>? ?? {};
+    // lanjutkan pembayaran
 
-    // Tambah id ke tiket dan event supaya bisa dipakai booking page
-    tiket['id'] = trx['id_tiket'];
-    event['id_event'] = trx['id_event'];
+    final tiket =
+        trx['tikets']
+        as Map<String,dynamic>? ??
+            {};
+
+    final event =
+        trx['event']
+        as Map<String,dynamic>? ??
+            {};
+
+    tiket['id'] =
+    trx['id_tiket'];
+
+    event['id_event'] =
+    trx['id_event'];
 
     if (!mounted) return;
 
     await Navigator.push(
+
       context,
+
       MaterialPageRoute(
-        builder: (_) => UserBookingPage(
-          tiket: tiket,
-          event: event,
-          existingIdTransaksi: trx['id_transaksi'],
-          existingExpiredAt: expiredAt,
-        ),
+
+        builder: (_) =>
+            UserBookingPage(
+
+              tiket: tiket,
+
+              event: event,
+
+              existingIdTransaksi:
+              trx[
+              'id_transaksi'
+              ],
+
+              existingExpiredAt:
+              expiredAt,
+            ),
       ),
     );
 
     _fetchTransaksi();
   }
 
-  Color _statusColor(String? status) {
-    switch (status) {
-      case 'holding': return Colors.purple;
-      case 'menunggu konfirmasi': return Colors.orange;
-      case 'dikonfirmasi': return Colors.blue;
-      case 'aktif': return Colors.green;
-      case 'cancel': return Colors.red;
-      case 'refund':
-      case 'refund diajukan': return Colors.teal;
-      default: return Colors.grey;
-    }
-  }
+  Widget _filterButton({
+    required String title,
+    required String value,
+  }) {
 
-  IconData _statusIcon(String? status) {
-    switch (status) {
-      case 'holding': return Icons.timer_outlined;
-      case 'menunggu konfirmasi': return Icons.hourglass_empty_outlined;
-      case 'dikonfirmasi': return Icons.check_circle_outline;
-      case 'aktif': return Icons.confirmation_number_outlined;
-      case 'cancel': return Icons.cancel_outlined;
-      case 'refund':
-      case 'refund diajukan': return Icons.replay_outlined;
-      default: return Icons.info_outline;
-    }
-  }
+    final selected =
+        selectedStatus == value;
 
-  void _lihatBuktiRefund(String url) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          backgroundColor: Colors.black,
-          appBar: AppBar(
-            backgroundColor: Colors.black,
-            iconTheme: const IconThemeData(color: Colors.white),
-            title: const Text('Bukti Refund', style: TextStyle(color: Colors.white)),
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            selectedStatus =
+                value;
+          });
+        },
+
+        child: Container(
+
+          height: 36,
+
+          margin:
+          const EdgeInsets.symmetric(
+            horizontal: 2,
           ),
-          body: Center(
-            child: InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.contain,
-                placeholder: (_, __) => const Center(child: CircularProgressIndicator(color: Colors.white)),
-                errorWidget: (_, __, ___) => const Center(
-                  child: Icon(Icons.broken_image, color: Colors.white, size: 64),
-                ),
+
+          decoration:
+          BoxDecoration(
+
+            color: selected
+                ? const Color(
+                0xFFD32F2F)
+                : Colors
+                .grey.shade200,
+
+            borderRadius:
+            BorderRadius.circular(
+                25),
+          ),
+
+          child: Center(
+            child: Text(
+              title,
+              style:
+              TextStyle(
+                fontWeight:
+                FontWeight
+                    .bold,
+
+                color: selected
+                    ? Colors
+                    .white
+                    : Colors
+                    .black54,
               ),
             ),
           ),
@@ -184,229 +278,400 @@ class _UserTransaksiPageState extends State<UserTransaksiPage> {
     );
   }
 
+  Color _statusColor(
+      String? status) {
+
+    switch (status) {
+
+      case 'aktif':
+        return Colors.green;
+
+      case 'expired':
+        return Colors.grey;
+
+      case 'refund':
+        return Colors.teal;
+
+      case 'menunggu konfirmasi':
+        return Colors.orange;
+
+      case 'holding':
+        return Colors.blue;
+
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+      BuildContext context) {
+
+    final filteredData =
+    _transaksi.where((trx) {
+
+      final status =
+      trx['status']
+          ?.toString()
+          .toLowerCase();
+
+      return status == selectedStatus;
+
+    }).toList()
+
+      ..sort((a, b) {
+
+        final dateA =
+            DateTime.tryParse(
+                a['updated_at']
+                    ?.toString() ??
+                    '') ??
+                DateTime(2000);
+
+        final dateB =
+            DateTime.tryParse(
+                b['updated_at']
+                    ?.toString() ??
+                    '') ??
+                DateTime(2000);
+
+        return dateB.compareTo(dateA);
+
+      });
+
     return Scaffold(
+
       appBar: AppBar(
         title: const Text(
           'Riwayat Transaksi',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color:
+            Colors.white,
+            fontWeight:
+            FontWeight.bold,
+          ),
         ),
-        backgroundColor: const Color(0xFFD32F2F),
-        automaticallyImplyLeading: false,
+
+        backgroundColor:
+        const Color(
+            0xFFD32F2F),
+
+        automaticallyImplyLeading:
+        false,
       ),
+
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFD32F2F)))
-          : _transaksi.isEmpty
+
           ? const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey),
-            SizedBox(height: 12),
-            Text('Belum ada transaksi.', style: TextStyle(color: Colors.grey)),
-          ],
+        child:
+        CircularProgressIndicator(
+          color: Color(
+              0xFFD32F2F),
         ),
       )
-          : RefreshIndicator(
-        color: const Color(0xFFD32F2F),
-        onRefresh: _fetchTransaksi,
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: _transaksi.length,
-          itemBuilder: (context, index) {
-            final trx = _transaksi[index];
-            final status = trx['status'] as String?;
-            final event = trx['event'] as Map<String, dynamic>?;
-            final tiket = trx['tikets'] as Map<String, dynamic>?;
-            final buktiRefund = trx['bukti_refund'] as String?;
 
-            return InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: status == 'aktif'
-                  ? () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => DetailTransaksiPage(trx: trx),
-                  ),
-                );
-              }
-                  : status == 'holding'
-                  ? () => _handleTapHolding(trx)
-                  : null,
-              child: Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+          : Column(
 
-                      // STATUS + ID
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              trx['id_transaksi'] ?? '-',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.5),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _statusColor(status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+        children: [
+
+          const SizedBox(
+              height: 15),
+
+          Padding(
+            padding:
+            const EdgeInsets.symmetric(
+              horizontal:
+              16,
+            ),
+
+            child: Row(
+              children: [
+
+                _filterButton(
+                  title: "Aktif",
+                  value: "aktif",
+                ),
+
+                _filterButton(
+                  title: "Expired",
+                  value: "expired",
+                ),
+
+                _filterButton(
+                  title: "Refund",
+                  value: "refund",
+                ),
+
+                _filterButton(
+                  title: "Delay",
+                  value: "menunggu konfirmasi",
+                ),
+
+                _filterButton(
+                  title: "Holding",
+                  value: "holding",
+                ),
+
+              ],
+            ),
+          ),
+
+          const SizedBox(
+              height: 15),
+
+          Expanded(
+            child:
+            filteredData
+                .isEmpty
+                ? const Center(
+              child:
+              Text(
+                "Tidak ada data",
+              ),
+            )
+
+                : RefreshIndicator(
+              onRefresh:
+              _fetchTransaksi,
+
+              child:
+              ListView.builder(
+
+                padding:
+                const EdgeInsets
+                    .all(
+                    16),
+
+                itemCount:
+                filteredData
+                    .length,
+
+                itemBuilder:
+                    (
+                    context,
+                    index,
+                    ) {
+
+                  final trx =
+                  filteredData[
+                  index];
+
+                  final status =
+                  trx['status'];
+
+                  final event =
+                  trx[
+                  'event'];
+
+                  final tiket =
+                  trx[
+                  'tikets'];
+
+                  return InkWell(
+
+                    onTap:
+                    status ==
+                        'aktif'
+
+                        ? () {
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (_) =>
+                              DetailTransaksiPage(
+                                trx:
+                                trx,
+                              ),
+                        ),
+                      );
+                    }
+
+                        : status ==
+                        'holding'
+
+                        ? () => _handleTapHolding(
+                      trx,
+                    )
+
+                        : null,
+
+                    child:
+                    Card(
+
+                      margin:
+                      const EdgeInsets.only(
+                        bottom:
+                        12,
+                      ),
+
+                      shape:
+                      RoundedRectangleBorder(
+                        borderRadius:
+                        BorderRadius.circular(
+                            12),
+                      ),
+
+                      child:
+                      Padding(
+
+                        padding:
+                        const EdgeInsets.all(
+                            16),
+
+                        child:
+                        Column(
+
+                          crossAxisAlignment:
+                          CrossAxisAlignment.start,
+
+                          children: [
+
+                            Row(
+                              mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+
                               children: [
-                                Icon(_statusIcon(status), size: 12, color: _statusColor(status)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  status ?? '-',
-                                  style: TextStyle(fontSize: 11, color: _statusColor(status), fontWeight: FontWeight.w600),
+
+                                Expanded(
+                                  child:
+                                  Text(
+                                    trx['id_transaksi'] ??
+                                        "-",
+
+                                    overflow:
+                                    TextOverflow.ellipsis,
+
+                                    style:
+                                    const TextStyle(
+                                      fontWeight:
+                                      FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+
+                                Container(
+                                  padding:
+                                  const EdgeInsets.symmetric(
+                                    horizontal:
+                                    8,
+                                    vertical:
+                                    4,
+                                  ),
+
+                                  decoration:
+                                  BoxDecoration(
+                                    color: _statusColor(status)
+                                        .withOpacity(
+                                        .1),
+
+                                    borderRadius:
+                                    BorderRadius.circular(
+                                        6),
+                                  ),
+
+                                  child:
+                                  Text(
+                                    status,
+
+                                    style:
+                                    TextStyle(
+                                      color:
+                                      _statusColor(
+                                          status),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
 
-                      const Divider(height: 16),
+                            const Divider(),
 
-                      // INFO EVENT & TIKET
-                      Text(
-                        event?['nama_event'] ?? '-',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${tiket?['nama_tiket'] ?? '-'} • ${tiket?['kategori'] ?? '-'}',
-                        style: const TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          Text(event?['tanggal'] ?? '-', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                        ],
-                      ),
+                            Text(
+                              event?[
+                              'nama_event'] ??
+                                  "-",
 
-                      const SizedBox(height: 8),
+                              style:
+                              const TextStyle(
+                                fontWeight:
+                                FontWeight.bold,
+                              ),
+                            ),
 
-                      // TOTAL
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Total Pembayaran', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                          Text(
-                            'Rp ${trx['sub_total'] ?? 0}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD32F2F), fontSize: 14),
-                          ),
-                        ],
-                      ),
+                            const SizedBox(
+                                height:
+                                5),
 
-                      // HINT HOLDING
-                      if (status == 'holding') ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.purple.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.purple.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.touch_app_outlined, size: 14, color: Colors.purple.shade700),
-                              const SizedBox(width: 6),
-                              Text('Tap untuk lanjutkan pembayaran', style: TextStyle(fontSize: 12, color: Colors.purple.shade700)),
-                            ],
-                          ),
-                        ),
-                      ],
+                            Text(
+                              '${tiket?['nama_tiket']} • ${tiket?['kategori']}',
+                            ),
 
-                      // TOMBOL AJUKAN REFUND (kalau cancel)
-                      if (status == 'cancel') ...[
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => UserRefundPage(
-                                    idTransaksi: trx['id_transaksi'],
-                                    subTotal: trx['sub_total'],
+                            const SizedBox(
+                                height:
+                                5),
+
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+
+                                Text(
+                                  trx['tanggal'] ?? "-",
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 13,
                                   ),
                                 ),
-                              );
-                              _fetchTransaksi();
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.teal,
-                              side: const BorderSide(color: Colors.teal),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            icon: const Icon(Icons.replay_outlined, size: 16),
-                            label: const Text('Ajukan Refund', style: TextStyle(fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                      ],
 
-                      // LIHAT BUKTI REFUND
-                      if (status == 'refund' && buktiRefund != null) ...[
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _lihatBuktiRefund(buktiRefund),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            icon: const Icon(Icons.image_outlined, size: 16),
-                            label: const Text('Lihat Bukti Refund', style: TextStyle(fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                      ],
+                                const SizedBox(height: 2),
 
-                      // INFO REFUND DIAJUKAN
-                      if (status == 'refund diajukan') ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.teal.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.teal.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.hourglass_empty_outlined, size: 14, color: Colors.teal.shade700),
-                              const SizedBox(width: 6),
-                              Text('Refund sedang diproses oleh finance', style: TextStyle(fontSize: 12, color: Colors.teal.shade700)),
-                            ],
-                          ),
+                                Text(
+                                  trx['waktu'] != null
+                                      ? trx['waktu']
+                                      .toString()
+                                      .substring(0,5)
+                                      : "-",
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 13,
+                                  ),
+                                ),
+
+                              ],
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            Align(
+                              alignment:
+                              Alignment.centerRight,
+
+                              child:
+                              Text(
+                                'Rp ${trx['sub_total']}',
+
+                                style:
+                                const TextStyle(
+                                  color:
+                                  Color(
+                                      0xFFD32F2F),
+
+                                  fontWeight:
+                                  FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ],
-                  ),
-                ),
+                      ),
+                    ),
+                  );
+                },
               ),
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
