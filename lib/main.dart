@@ -100,15 +100,13 @@ class _MyAppState
             return;
           }
 
-          // =========================
+          // ==========================
           // LOGIN EMAIL BIASA
-          // =========================
-          final userData =
+          // ==========================
+
           await supabase
-              .schema(
-              'ursaevent')
-              .from(
-              'users')
+              .schema('ursaevent')
+              .from('users')
               .select()
               .eq(
             'email',
@@ -116,49 +114,8 @@ class _MyAppState
           )
               .single();
 
-          final level =
-          userData['level'];
-
-          String route =
-              AppRoutes.user;
-
-          switch(level){
-
-            case 'superadmin':
-              route =
-                  AppRoutes
-                      .superadmin;
-              break;
-
-            case 'admin':
-              route =
-                  AppRoutes
-                      .admin;
-              break;
-
-            case 'crew':
-              route =
-                  AppRoutes
-                      .crew;
-              break;
-
-            case 'finance':
-              route =
-                  AppRoutes
-                      .finance;
-              break;
-
-            default:
-              route =
-                  AppRoutes
-                      .user;
-          }
-
-          navigatorKey
-              .currentState
-              ?.pushReplacementNamed(
-            route,
-          );
+        // jangan redirect otomatis
+          return;
         }
       },
     );
