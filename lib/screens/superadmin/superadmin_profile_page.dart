@@ -52,7 +52,7 @@ class _SuperadminProfilePageState extends State<SuperadminProfilePage> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6A1B9A),
+              backgroundColor: const Color(0xFFD32F2F),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -90,11 +90,11 @@ class _SuperadminProfilePageState extends State<SuperadminProfilePage> {
       appBar: AppBar(
         title: const Text('Profil',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF6A1B9A),
+        backgroundColor: const Color(0xFFD32F2F),
         automaticallyImplyLeading: false,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF6A1B9A)))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFD32F2F)))
           : SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -103,12 +103,12 @@ class _SuperadminProfilePageState extends State<SuperadminProfilePage> {
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF6A1B9A), width: 2),
+                border: Border.all(color: const Color(0xFFD32F2F), width: 2),
               ),
               child: const CircleAvatar(
                 radius: 48,
                 backgroundColor: Color(0xFFF3E5F5),
-                child: Icon(Icons.admin_panel_settings, size: 48, color: Color(0xFF6A1B9A)),
+                child: Icon(Icons.admin_panel_settings, size: 48, color: Color(0xFFD32F2F)),
               ),
             ),
             const SizedBox(height: 16),
@@ -120,13 +120,13 @@ class _SuperadminProfilePageState extends State<SuperadminProfilePage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.purple.shade50,
+                color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 'Superadmin',
                 style: TextStyle(
-                  color: Colors.purple.shade700,
+                  color: Colors.red.shade700,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -166,7 +166,7 @@ class _SuperadminProfilePageState extends State<SuperadminProfilePage> {
               child: ElevatedButton.icon(
                 onPressed: _logout,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6A1B9A),
+                  backgroundColor: const Color(0xFFD32F2F),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(vertical: 14),

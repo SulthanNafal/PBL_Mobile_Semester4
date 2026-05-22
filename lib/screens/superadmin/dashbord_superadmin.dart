@@ -30,7 +30,7 @@ class _DashbordSuperadminState extends State<DashbordSuperadmin> {
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        selectedItemColor: const Color(0xFF6A1B9A),
+        selectedItemColor: const Color(0xFFD32F2F),
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
         onTap: (index) => setState(() => _currentIndex = index),

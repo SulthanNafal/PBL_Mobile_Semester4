@@ -11,7 +11,7 @@ class SuperadminScanPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Scan Tiket',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF6A1B9A),
+        backgroundColor: const Color(0xFFD32F2F),
         automaticallyImplyLeading: false,
       ),
       body: Center(
@@ -36,10 +36,10 @@ class SuperadminScanPage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6A1B9A).withOpacity(.1),
+                    color: const Color(0xFFD32F2F).withOpacity(.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.qr_code_scanner, size: 70, color: Color(0xFF6A1B9A)),
+                  child: const Icon(Icons.qr_code_scanner, size: 70, color: Color(0xFFD32F2F)),
                 ),
                 const SizedBox(height: 20),
                 const Text('Scan Tiket Peserta',
@@ -62,7 +62,7 @@ class SuperadminScanPage extends StatelessWidget {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6A1B9A),
+                      backgroundColor: const Color(0xFFD32F2F),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),

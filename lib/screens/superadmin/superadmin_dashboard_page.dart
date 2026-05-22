@@ -81,14 +81,14 @@ class _SuperadminDashboardPageState extends State<SuperadminDashboardPage> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFF6A1B9A),
+        backgroundColor: const Color(0xFFD32F2F),
         title: const Text(
           'Dashboard Superadmin',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
       body: RefreshIndicator(
-        color: const Color(0xFF6A1B9A),
+        color: const Color(0xFFD32F2F),
         onRefresh: () async => setState(() {}),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -104,7 +104,7 @@ class _SuperadminDashboardPageState extends State<SuperadminDashboardPage> {
                     return const Center(
                       child: Padding(
                         padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(color: Color(0xFF6A1B9A)),
+                        child: CircularProgressIndicator(color: Color(0xFFD32F2F)),
                       ),
                     );
                   }
@@ -134,7 +134,7 @@ class _SuperadminDashboardPageState extends State<SuperadminDashboardPage> {
                             'Pendapatan',
                             _formatRupiah((s['totalPendapatan'] as num).toDouble()),
                             Icons.account_balance_wallet_outlined,
-                            const Color(0xFF6A1B9A),
+                            const Color(0xFFD32F2F),
                           ),
                         ],
                       ),
@@ -153,7 +153,7 @@ class _SuperadminDashboardPageState extends State<SuperadminDashboardPage> {
                 builder: (context, snap) {
                   if (snap.connectionState == ConnectionState.waiting) {
                     return const Center(
-                        child: CircularProgressIndicator(color: Color(0xFF6A1B9A)));
+                        child: CircularProgressIndicator(color: Color(0xFFD32F2F)));
                   }
                   if (snap.hasError) {
                     return Center(child: Text('Error: ${snap.error}'));
@@ -199,13 +199,13 @@ class _SuperadminDashboardPageState extends State<SuperadminDashboardPage> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.purple.shade50,
+                                  color: Colors.red.shade50,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   'Kategori: ${item['kategori']}',
                                   style: TextStyle(
-                                    color: Colors.purple.shade700,
+                                    color: Colors.red.shade700,
                                     fontWeight: FontWeight.w500,
                                     fontSize: 12,
                                   ),
@@ -218,7 +218,7 @@ class _SuperadminDashboardPageState extends State<SuperadminDashboardPage> {
                                 borderRadius: BorderRadius.circular(20),
                                 backgroundColor: Colors.grey.shade300,
                                 valueColor: const AlwaysStoppedAnimation(
-                                    Color(0xFF6A1B9A)),
+                                    Color(0xFFD32F2F)),
                               ),
                             ],
                           ),

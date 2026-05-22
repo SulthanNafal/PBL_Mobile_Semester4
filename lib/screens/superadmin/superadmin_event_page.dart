@@ -48,15 +48,15 @@ class _SuperadminEventPageState extends State<SuperadminEventPage> {
       appBar: AppBar(
         title: const Text('Daftar Event',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF6A1B9A),
+        backgroundColor: const Color(0xFFD32F2F),
         automaticallyImplyLeading: false,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF6A1B9A)))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFD32F2F)))
           : _events.isEmpty
           ? const Center(child: Text('Belum ada event'))
           : RefreshIndicator(
-        color: const Color(0xFF6A1B9A),
+        color: const Color(0xFFD32F2F),
         onRefresh: _fetchEvents,
         child: ListView.builder(
           padding: const EdgeInsets.all(16),
