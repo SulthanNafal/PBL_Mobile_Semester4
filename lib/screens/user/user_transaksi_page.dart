@@ -278,11 +278,8 @@ class _UserTransaksiPageState
     );
   }
 
-  Color _statusColor(
-      String? status) {
-
+  Color _statusColor(String? status) {
     switch (status) {
-
       case 'aktif':
         return Colors.green;
 
@@ -291,6 +288,12 @@ class _UserTransaksiPageState
 
       case 'refund':
         return Colors.teal;
+
+      case 'refund diajukan':
+        return Colors.teal;
+
+      case 'cancel':
+        return Colors.red;
 
       case 'menunggu konfirmasi':
         return Colors.orange;
@@ -314,6 +317,14 @@ class _UserTransaksiPageState
       trx['status']
           ?.toString()
           .toLowerCase();
+
+      // tab refund menampilkan
+      // refund + refund diajukan
+      if (selectedStatus == 'refund') {
+
+        return status == 'refund' ||
+            status == 'refund diajukan';
+      }
 
       return status == selectedStatus;
 
@@ -400,6 +411,11 @@ class _UserTransaksiPageState
                 _filterButton(
                   title: "Refund",
                   value: "refund",
+                ),
+
+                _filterButton(
+                  title: "Cancel",
+                  value: "cancel",
                 ),
 
                 _filterButton(
@@ -659,9 +675,75 @@ class _UserTransaksiPageState
 
                                   fontWeight:
                                   FontWeight.bold,
+
                                 ),
                               ),
                             ),
+
+                            // tombol refund
+                            if (status == 'cancel') ...[
+
+                              const SizedBox(height: 10),
+
+                              SizedBox(
+                                width: double.infinity,
+
+                                child: OutlinedButton.icon(
+
+                                  onPressed: () async {
+
+                                    await Navigator.push(
+
+                                      context,
+
+                                      MaterialPageRoute(
+
+                                        builder: (_) =>
+                                            UserRefundPage(
+
+                                              idTransaksi:
+                                              trx['id_transaksi'],
+
+                                              subTotal:
+                                              trx['sub_total'],
+                                            ),
+                                      ),
+                                    );
+
+                                    await _fetchTransaksi();
+                                  },
+
+                                  icon: const Icon(
+                                    Icons.replay_outlined,
+                                  ),
+
+                                  label: const Text(
+                                    'Ajukan Refund',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+
+                                  style:
+                                  OutlinedButton.styleFrom(
+
+                                    foregroundColor:
+                                    Colors.teal,
+
+                                    side: const BorderSide(
+                                      color: Colors.teal,
+                                    ),
+
+                                    shape:
+                                    RoundedRectangleBorder(
+                                      borderRadius:
+                                      BorderRadius.circular(
+                                          10),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

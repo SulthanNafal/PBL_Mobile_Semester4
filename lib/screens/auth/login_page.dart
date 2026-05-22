@@ -91,19 +91,7 @@ class _LoginPageState extends State<LoginPage> {
 
       // LOGIN GAGAL
       else {
-        String errorMessage = result?.toString() ??
-            "Username atau password salah";
-
-        if (errorMessage.contains('SocketException') ||
-            errorMessage.contains('Failed host lookup') ||
-            errorMessage.contains('ClientException')) {
-          errorMessage = "Silahkan nyalakan internet / kuota anda";
-        }
-
-        _showPopup(
-          title: "Login Gagal",
-          message: errorMessage,
-        );
+        _showLoginFailedPopup();
       }
     } catch (e) {
       String errorMessage = e.toString();
@@ -145,6 +133,43 @@ class _LoginPageState extends State<LoginPage> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLoginFailedPopup() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text(
+          "Tidak Bisa Menemukan Akun",
+        ),
+        content: const Text(
+          "Kami tidak bisa menemukan akun dengan username/email tersebut "
+              "atau password salah.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+
+              // kosongkan password
+              _passwordController.clear();
+            },
+            child: const Text("COBA LAGI"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(
+                context,
+                AppRoutes.register,
+              );
+            },
+            child: const Text("DAFTAR"),
           ),
         ],
       ),
