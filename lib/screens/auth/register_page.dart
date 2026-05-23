@@ -59,32 +59,72 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       // ==========================
-      // SUCCESS
-      // ==========================
-      if (result == "success") {
+// SUCCESS REGISTER / TAMBAH PASSWORD
+// ==========================
+      if (
+      result == "success" ||
+          result == "Password berhasil ditambahkan"
+      ) {
 
         if (!mounted) return;
 
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => AlertDialog(
-            title: const Text("Berhasil"),
-            content: const Text(
-              "Registrasi berhasil.\nSilakan cek email untuk verifikasi akun.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
+        String message;
 
-                  // KEMBALI KE LOGIN
-                  Navigator.pop(context);
-                },
-                child: const Text("OK"),
+        // tambah password akun Google
+        if (result ==
+            "Password berhasil ditambahkan") {
+
+          message =
+          "Password berhasil ditambahkan.\n"
+              "Sekarang Anda dapat login menggunakan Google atau Email.";
+
+        } else {
+
+          // register akun baru
+          message =
+          "Registrasi berhasil.\n"
+              "Silakan cek email untuk verifikasi akun.";
+        }
+
+        showDialog(
+
+          context: context,
+
+          barrierDismissible: false,
+
+          builder: (_) =>
+              AlertDialog(
+
+                title:
+                const Text(
+                    "Berhasil"
+                ),
+
+                content:
+                Text(
+                    message
+                ),
+
+                actions: [
+
+                  TextButton(
+
+                    onPressed: () {
+
+                      Navigator.pop(
+                          context);
+
+                      Navigator.pop(
+                          context);
+                    },
+
+                    child:
+                    const Text(
+                        "OK"
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
         );
 
       } else {
@@ -92,9 +132,15 @@ class _RegisterPageState extends State<RegisterPage> {
         // ==========================
         // ERROR POPUP
         // ==========================
+
         _showPopup(
-          title: "Register Gagal",
-          message: result ?? "Terjadi kesalahan",
+
+          title:
+          "Register Gagal",
+
+          message:
+          result ??
+              "Terjadi kesalahan",
         );
       }
 

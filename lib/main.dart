@@ -88,14 +88,54 @@ class _MyAppState
           // =========================
           if (isGoogleAuth) {
 
-            // reset flag
+            final existingUser =
+            await supabase
+                .schema('ursaevent')
+                .from('users')
+                .select()
+                .eq(
+              'id',
+              user.id,
+            )
+                .maybeSingle();
+
+            if (existingUser == null) {
+
+              await supabase
+                  .schema('ursaevent')
+                  .from('users')
+                  .insert({
+
+                'id': user.id,
+
+                'name':
+                user.userMetadata?[
+                'full_name'
+                ],
+
+                'username':
+                user.email
+                    ?.split('@')
+                    .first,
+
+                'email':
+                user.email,
+
+                'password': null,
+
+                'level': 'user',
+
+                'created_at':
+                DateTime.now()
+                    .toIso8601String(),
+              });
+            }
+
             isGoogleAuth = false;
 
-            navigatorKey
-                .currentState
+            navigatorKey.currentState
                 ?.pushReplacementNamed(
-              AppRoutes.user,
-            );
+                AppRoutes.user);
 
             return;
           }

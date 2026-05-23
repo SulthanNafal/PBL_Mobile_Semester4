@@ -53,6 +53,83 @@ class AuthController {
       }
 
       // ======================
+      // CEK EMAIL
+      // ======================
+
+      final emailExist =
+      await supabase
+          .schema('ursaevent')
+          .from('users')
+          .select()
+          .eq(
+        'email',
+        email.trim(),
+      )
+          .maybeSingle();
+
+      if (emailExist != null) {
+
+        // akun Google (password masih kosong)
+        if (emailExist['password'] == null) {
+
+          final currentUser =
+              supabase.auth.currentUser;
+
+          if (currentUser == null) {
+            return
+              "Silakan login Google terlebih dahulu";
+          }
+
+          if (currentUser.email !=
+              email.trim()) {
+            return
+              "Gunakan akun Google yang sama";
+          }
+
+          final hashed =
+          normalizePassword(
+              password);
+
+          // tambah password ke auth user
+          await supabase.auth.updateUser(
+
+            UserAttributes(
+              password:
+              password.trim(),
+            ),
+          );
+
+          // update data lokal juga
+          await supabase
+              .schema('ursaevent')
+              .from('users')
+              .update({
+
+            'password':
+            hashed,
+
+            // update username dari form
+            'username':
+            username.trim(),
+
+            // update nama juga
+            'name':
+            username.trim(),
+
+          }).eq(
+            'id',
+            emailExist['id'],
+          );
+
+          return
+            "Password berhasil ditambahkan";
+        }
+
+        return
+          "Email sudah terdaftar";
+      }
+
+      // ======================
       // REGISTER AUTH
       // ======================
       final response =
