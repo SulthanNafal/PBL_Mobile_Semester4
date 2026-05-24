@@ -485,33 +485,33 @@ class _UserTransaksiPageState
 
                   return InkWell(
 
-                    onTap:
-                    status ==
-                        'aktif'
+                    onTap: () async {
 
-                        ? () {
+                      // HOLDING
+                      if (status == 'holding') {
+                        await _handleTapHolding(trx);
+                        return;
+                      }
 
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (_) =>
-                              DetailTransaksiPage(
-                                trx:
-                                trx,
-                              ),
-                        ),
-                      );
-                    }
+                      // AKTIF / REFUND / REFUND DIAJUKAN
+                      if (
+                      status == 'aktif' ||
+                          status == 'refund' ||
+                          status == 'refund diajukan'
+                      ) {
 
-                        : status ==
-                        'holding'
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DetailTransaksiPage(
+                              trx: trx,
+                            ),
+                          ),
+                        );
 
-                        ? () => _handleTapHolding(
-                      trx,
-                    )
-
-                        : null,
+                        _fetchTransaksi();
+                      }
+                    },
 
                     child:
                     Card(
