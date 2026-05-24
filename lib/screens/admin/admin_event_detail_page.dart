@@ -31,7 +31,15 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
           .from('tikets')
           .select()
           .eq('id_event', widget.event['id_event'])
-          .order('created_at', ascending: true);
+          .order(
+        'updated_at',
+        ascending: false,
+        nullsFirst: false,
+      )
+          .order(
+        'created_at',
+        ascending: false,
+      );
 
       setState(() {
         _tikets = List<Map<String, dynamic>>.from(data);
@@ -267,15 +275,26 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
     required bool isEdit,
   }) async {
     try {
-      final payload = {
+      final Map<String, dynamic> payload = {
         'nama_tiket': namaTiket,
         'kuota': kuota,
         'harga': harga,
         'kategori': kategori,
-        'tanggal_mulai': tanggalMulai?.toIso8601String().split('T')[0],
-        'tanggal_akhir': tanggalAkhir?.toIso8601String().split('T')[0],
-        'updated_at': DateTime.now().toIso8601String(),
+        'tanggal_mulai':
+        tanggalMulai?.toIso8601String().split('T')[0],
+        'tanggal_akhir':
+        tanggalAkhir?.toIso8601String().split('T')[0],
+
+        // selalu update saat tambah/edit
+        'updated_at':
+        DateTime.now().toIso8601String(),
       };
+
+      // hanya saat tambah tiket baru
+      if (!isEdit) {
+        payload['created_at'] =
+            DateTime.now().toIso8601String();
+      }
 
       if (isEdit) {
         await supabase
@@ -284,22 +303,38 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
             .update(payload)
             .eq('id', tiketId!);
       } else {
-        payload['id_event'] = widget.event['id_event'];
-        await supabase.schema('ursaevent').from('tikets').insert(payload);
+        payload['id_event'] =
+        widget.event['id_event'];
+
+        await supabase
+            .schema('ursaevent')
+            .from('tikets')
+            .insert(payload);
       }
 
       await _fetchTikets();
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
           SnackBar(
-            content: Text(isEdit ? 'Tiket berhasil diupdate' : 'Tiket berhasil ditambah'),
+            content: Text(
+              isEdit
+                  ? 'Tiket berhasil diupdate'
+                  : 'Tiket berhasil ditambah',
+            ),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan tiket: $e')),
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
+          SnackBar(
+            content: Text(
+              'Gagal menyimpan tiket: $e',
+            ),
+          ),
         );
       }
     }
@@ -309,44 +344,142 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
   // HAPUS TIKET
   // =========================
   Future<void> _deleteTiket(int tiketId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Hapus Tiket'),
-        content: const Text('Yakin ingin menghapus tiket ini?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+    try {
 
-    if (confirm == true) {
-      try {
+      // cek apakah tiket pernah dipakai transaksi
+      final transaksi = await supabase
+          .schema('ursaevent')
+          .from('transaksis')
+          .select('id_tiket')
+          .eq('id_tiket', tiketId)
+          .limit(1);
+
+      // jika tiket sudah terjual
+      if ((transaksi as List).isNotEmpty) {
+        if (!mounted) return;
+
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            title: const Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFD32F2F),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  "Tidak Bisa Dihapus",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            content: const Text(
+              "Tiket ini sudah terjual dan memiliki riwayat transaksi.\n\n"
+                  "Tiket tidak dapat dihapus.",
+            ),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFFD32F2F),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    "OK",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        return;
+      }
+
+      // popup konfirmasi hapus
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Hapus Tiket"),
+          content: const Text(
+              "Yakin ingin menghapus tiket ini?"
+          ),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.pop(context, false),
+              child: const Text("Batal"),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.pop(context, true),
+              child: const Text(
+                "Hapus",
+                style: TextStyle(
+                  color: Colors.red,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
         await supabase
             .schema('ursaevent')
             .from('tikets')
             .delete()
             .eq('id', tiketId);
+
         await _fetchTikets();
+
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tiket berhasil dihapus')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal menghapus tiket: $e')),
+          ScaffoldMessenger.of(context)
+              .showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Tiket berhasil dihapus",
+              ),
+            ),
           );
         }
       }
+
+    } catch (e) {
+      print(e);
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Error"),
+          content: Text("$e"),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.pop(context),
+              child: const Text("OK"),
+            )
+          ],
+        ),
+      );
     }
   }
 
