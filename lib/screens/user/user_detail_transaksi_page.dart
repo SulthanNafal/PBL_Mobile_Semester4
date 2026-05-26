@@ -352,44 +352,34 @@ class DetailTransaksiPage extends StatelessWidget {
                 height: 20),
 
             // BUKTI PEMBAYARAN
-            if (buktiBayar !=
-                null)
+            if ((status == 'refund' ||
+                status == 'refund diajukan') &&
+                buktiBayar != null &&
+                buktiBayar.toString().isNotEmpty)
+
               Card(
-                shape:
-                RoundedRectangleBorder(
-                  borderRadius:
-                  BorderRadius
-                      .circular(
-                      12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
 
                 child: Padding(
-                  padding:
-                  const EdgeInsets
-                      .all(16),
+                  padding: const EdgeInsets.all(16),
 
                   child: Column(
                     crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
+                    CrossAxisAlignment.start,
 
                     children: [
 
                       const Text(
                         'Bukti Pembayaran',
-                        style:
-                        TextStyle(
-                          fontWeight:
-                          FontWeight
-                              .bold,
-                          fontSize:
-                          16,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
 
-                      const SizedBox(
-                          height:
-                          15),
+                      const SizedBox(height: 15),
 
                       _buktiWidget(
                         context,
@@ -405,46 +395,33 @@ class DetailTransaksiPage extends StatelessWidget {
                 height: 20),
 
             // BUKTI REFUND
-            if (status ==
-                'refund' &&
-                buktiRefund !=
-                    null)
+            if ((status == 'refund') &&
+                buktiRefund != null &&
+                buktiRefund.toString().isNotEmpty)
+
               Card(
-                shape:
-                RoundedRectangleBorder(
-                  borderRadius:
-                  BorderRadius
-                      .circular(
-                      12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
 
                 child: Padding(
-                  padding:
-                  const EdgeInsets
-                      .all(16),
+                  padding: const EdgeInsets.all(16),
 
                   child: Column(
                     crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
+                    CrossAxisAlignment.start,
 
                     children: [
 
                       const Text(
                         'Bukti Transfer Refund',
-                        style:
-                        TextStyle(
-                          fontWeight:
-                          FontWeight
-                              .bold,
-                          fontSize:
-                          16,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
 
-                      const SizedBox(
-                          height:
-                          15),
+                      const SizedBox(height: 15),
 
                       _buktiWidget(
                         context,
