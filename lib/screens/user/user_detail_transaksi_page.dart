@@ -69,6 +69,11 @@ class DetailTransaksiPage extends StatelessWidget {
                     ),
 
                     _item(
+                      'Jumlah',
+                      '${trx['jumlah'] ?? 1} Tiket',
+                    ),
+
+                    _item(
                       'Tanggal',
                       event?['tanggal'] ?? '-',
                     ),
