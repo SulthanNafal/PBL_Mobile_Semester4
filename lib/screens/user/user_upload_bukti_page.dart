@@ -9,7 +9,9 @@ class UserUploadBuktiPage extends StatefulWidget {
   final String idTransaksi;
   final Map<String, dynamic> tiket;
   final Map<String, dynamic> event;
+  final int jumlah;
   final Timer? timer;
+
 
   const UserUploadBuktiPage({
     super.key,
@@ -17,6 +19,7 @@ class UserUploadBuktiPage extends StatefulWidget {
     required this.tiket,
     required this.event,
     required this.timer,
+    required this.jumlah,
   });
 
   @override
@@ -148,9 +151,18 @@ class _UserUploadBuktiPageState extends State<UserUploadBuktiPage> {
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   const SizedBox(height: 4),
-                  Text('Event: ${widget.event['nama_event']}'),
                   Text(
-                      'Tiket: ${widget.tiket['nama_tiket']} - ${widget.tiket['kategori']}'),
+                    'Event: ${widget.event['nama_event']}',
+                  ),
+
+                  Text(
+                    'Tiket: ${widget.tiket['nama_tiket']} - ${widget.tiket['kategori']}',
+                  ),
+
+                  Text(
+                    'Jumlah: ${widget.jumlah} Tiket',
+                  ),
+
                   Text(
                     'Total: Rp ${widget.tiket['harga']}',
                     style: const TextStyle(

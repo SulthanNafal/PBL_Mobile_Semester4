@@ -64,59 +64,133 @@ class _UserEventDetailPageState extends State<UserEventDetailPage> {
   // DIALOG KONFIRMASI BELI
   // =========================
   void _showBeliDialog(Map<String, dynamic> tiket) {
+    int jumlah = 1;
+    final int kuota = tiket['kuota'] ?? 0;
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Konfirmasi Pembelian'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Event: ${widget.event['nama_event']}'),
-            const SizedBox(height: 4),
-            Text('Tiket: ${tiket['nama_tiket']}'),
-            const SizedBox(height: 4),
-            Text('Kategori: ${tiket['kategori']}'),
-            const SizedBox(height: 4),
-            Text(
-              'Harga: Rp ${tiket['harga']}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFD32F2F),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Kamu punya 30 menit untuk menyelesaikan pembayaran.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => UserBookingPage(
-                    tiket: tiket,
-                    event: widget.event,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          final harga = tiket['harga'] ?? 0;
+          final subtotal = harga * jumlah;
+
+          return AlertDialog(
+            title: const Text('Konfirmasi Pembelian'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                Text('Event: ${widget.event['nama_event']}'),
+                const SizedBox(height: 4),
+
+                Text('Tiket: ${tiket['nama_tiket']}'),
+                const SizedBox(height: 4),
+
+                Text('Kategori: ${tiket['kategori']}'),
+                const SizedBox(height: 12),
+
+                const Text(
+                  'Jumlah Tiket',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD32F2F),
-              foregroundColor: Colors.white,
+
+                const SizedBox(height: 8),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+
+                    IconButton(
+                      onPressed: jumlah > 1
+                          ? () {
+                        setStateDialog(() {
+                          jumlah--;
+                        });
+                      }
+                          : null,
+                      icon: const Icon(Icons.remove_circle),
+                    ),
+
+                    Text(
+                      '$jumlah',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    IconButton(
+                      onPressed: jumlah < kuota
+                          ? () {
+                        setStateDialog(() {
+                          jumlah++;
+                        });
+                      }
+                          : null,
+                      icon: const Icon(Icons.add_circle),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  'Harga Satuan: Rp $harga',
+                ),
+
+                Text(
+                  'Total: Rp $subtotal',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFD32F2F),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                const Text(
+                  'Kamu punya 30 menit untuk menyelesaikan pembayaran.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
             ),
-            child: const Text('Lanjut Booking'),
-          ),
-        ],
+
+            actions: [
+
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Batal'),
+              ),
+
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => UserBookingPage(
+                        tiket: {
+                          ...tiket,
+                          'jumlah': jumlah,
+                        },
+                        event: widget.event,
+                        jumlah: jumlah,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Lanjut Booking'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

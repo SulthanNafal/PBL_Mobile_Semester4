@@ -249,6 +249,11 @@ class _CrewTiketDetailPageState
                     ),
 
                     _item(
+                      "Jumlah Tiket",
+                      "${widget.trx['jumlah'] ?? 1}",
+                    ),
+
+                    _item(
                       "Tanggal",
                       widget.event[
                       'tanggal']

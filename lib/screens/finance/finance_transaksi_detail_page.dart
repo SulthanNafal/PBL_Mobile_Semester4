@@ -50,6 +50,7 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
   // =========================
   Future<void> _incrementKuota() async {
     final idTiket = _trx['id_tiket'];
+
     if (idTiket == null) return;
 
     final tiketData = await supabase
@@ -61,13 +62,18 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
 
     final kuota = tiketData['kuota'] ?? 0;
 
+    final jumlah = (_trx['jumlah'] ?? 1) as int;
+
     await supabase
         .schema('ursaevent')
         .from('tikets')
-        .update({'kuota': kuota + 1})
+        .update({
+      'kuota': kuota + jumlah,
+    })
         .eq('id', idTiket);
 
-    debugPrint('=== INCREMENT KUOTA: $kuota → ${kuota + 1} ===');
+    debugPrint(
+        '=== INCREMENT KUOTA: $kuota → ${kuota + jumlah} ===');
   }
 
   // =========================
@@ -794,6 +800,8 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
                 const SizedBox(height: 10),
                 _infoRow(Icons.confirmation_number_outlined, 'Tiket', '${tiket?['nama_tiket'] ?? '-'} • ${tiket?['kategori'] ?? '-'}'),
                 const SizedBox(height: 10),
+                _infoRow(Icons.numbers, 'Jumlah Tiket', '${_trx['jumlah'] ?? 1} tiket',),
+                const SizedBox(height: 10),
                 _infoRow(Icons.calendar_today_outlined, 'Tanggal', _trx['tanggal'] ?? '-'),
                 const SizedBox(height: 10),
                 _infoRow(Icons.payments_outlined, 'Total', _formatRupiah(_trx['sub_total'])),
@@ -882,6 +890,8 @@ class _FinanceTransaksiDetailPageState extends State<FinanceTransaksiDetailPage>
                         _infoRow(Icons.credit_card_outlined, 'No. VA / Rekening', _trx['refund_no_va'] ?? '-'),
                         const SizedBox(height: 10),
                         _infoRow(Icons.person_outline, 'Atas Nama', _trx['refund_nama'] ?? '-'),
+                        const SizedBox(height: 10),
+                        _infoRow(Icons.confirmation_number_outlined, 'Jumlah Tiket', '${_trx['jumlah'] ?? 1} tiket',),
                         const SizedBox(height: 10),
                         _infoRow(Icons.payments_outlined, 'Jumlah Refund', _formatRupiah(_trx['sub_total'])),
                       ],

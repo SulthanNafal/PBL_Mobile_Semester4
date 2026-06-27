@@ -181,11 +181,10 @@ class _UserTransaksiPageState
         as Map<String,dynamic>? ??
             {};
 
-    tiket['id'] =
-    trx['id_tiket'];
+    tiket['id'] = trx['id_tiket'];
+    tiket['jumlah'] = trx['jumlah'] ?? 1;
 
-    event['id_event'] =
-    trx['id_event'];
+    event['id_event'] = trx['id_event'];
 
     if (!mounted) return;
 
@@ -197,16 +196,11 @@ class _UserTransaksiPageState
 
         builder: (_) =>
             UserBookingPage(
-
               tiket: tiket,
-
               event: event,
-
+              jumlah: trx['jumlah'] ?? 1,
               existingIdTransaksi:
-              trx[
-              'id_transaksi'
-              ],
-
+              trx['id_transaksi'],
               existingExpiredAt:
               expiredAt,
             ),

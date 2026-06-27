@@ -8,6 +8,7 @@ import 'user_upload_bukti_page.dart';
 class UserBookingPage extends StatefulWidget {
   final Map<String, dynamic> tiket;
   final Map<String, dynamic> event;
+  final int jumlah;
 
   // MODE RESUME: kalau ada transaksi holding yang belum expired
   final String? existingIdTransaksi;
@@ -17,6 +18,7 @@ class UserBookingPage extends StatefulWidget {
     super.key,
     required this.tiket,
     required this.event,
+    required this.jumlah,
     this.existingIdTransaksi,
     this.existingExpiredAt,
   });
@@ -75,15 +77,23 @@ class _UserBookingPageState extends State<UserBookingPage> {
         .single();
 
     final kuota = tiketData['kuota'] ?? 0;
-    if (kuota <= 0) throw Exception('Kuota tiket sudah habis');
+
+    final jumlah = widget.tiket['jumlah'] ?? 1;
+
+    if (kuota < jumlah) {
+      throw Exception('Kuota tiket tidak mencukupi');
+    }
 
     await supabase
         .schema('ursaevent')
         .from('tikets')
-        .update({'kuota': kuota - 1})
+        .update({
+      'kuota': kuota - jumlah,
+    })
         .eq('id', widget.tiket['id']);
 
-    debugPrint('=== DECREMENT KUOTA: $kuota → ${kuota - 1} ===');
+    debugPrint(
+        '=== DECREMENT KUOTA: $kuota → ${kuota - jumlah} ===');
   }
 
   // =========================
@@ -99,13 +109,18 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
     final kuota = tiketData['kuota'] ?? 0;
 
+    final jumlah = widget.tiket['jumlah'] ?? 1;
+
     await supabase
         .schema('ursaevent')
         .from('tikets')
-        .update({'kuota': kuota + 1})
+        .update({
+      'kuota': kuota + jumlah,
+    })
         .eq('id', widget.tiket['id']);
 
-    debugPrint('=== INCREMENT KUOTA: $kuota → ${kuota + 1} ===');
+    debugPrint(
+        '=== INCREMENT KUOTA: $kuota → ${kuota + jumlah} ===');
   }
 
   // =========================
@@ -246,6 +261,16 @@ class _UserBookingPageState extends State<UserBookingPage> {
       // CEK & KURANGI KUOTA
       await _decrementKuota();
 
+      final jumlah = widget.tiket['jumlah'] ?? widget.jumlah;
+
+      final harga = widget.tiket['harga'] ?? 0;
+
+      final subtotal = harga * jumlah;
+
+      final ppn = (subtotal * 0.11).round();
+
+      final totalBayar = subtotal + ppn;
+
       // INSERT TRANSAKSI
       await supabase
           .schema('ursaevent')
@@ -255,7 +280,8 @@ class _UserBookingPageState extends State<UserBookingPage> {
         'id_user': user.id,
         'id_tiket': widget.tiket['id'],
         'id_event': widget.event['id_event'],
-        'sub_total': widget.tiket['harga'],
+        'sub_total': totalBayar,
+        'jumlah': jumlah,
         'tanggal': now.toIso8601String().split('T')[0],
         'waktu': now.toIso8601String().split('T')[1].substring(0, 8),
         'status': 'holding',
@@ -613,8 +639,23 @@ class _UserBookingPageState extends State<UserBookingPage> {
                   _buildRow('Kategori', widget.tiket['kategori'] ?? '-'),
                   const Divider(),
                   _buildRow(
+                    'Jumlah Tiket',
+                    '${widget.jumlah}',
+                  ),
+
+                  _buildRow(
+                    'Subtotal',
+                    'Rp ${((widget.tiket['harga'] ?? 0) * widget.jumlah)}',
+                  ),
+
+                  _buildRow(
+                    'PPN 11%',
+                    'Rp ${((((widget.tiket['harga'] ?? 0) * widget.jumlah) * 0.11).round())}',
+                  ),
+
+                  _buildRow(
                     'Total Pembayaran',
-                    'Rp ${widget.tiket['harga'] ?? 0}',
+                    'Rp ${(((widget.tiket['harga'] ?? 0) * widget.jumlah) + ((((widget.tiket['harga'] ?? 0) * widget.jumlah) * 0.11).round()))}',
                     isBold: true,
                     valueColor: const Color(0xFFD32F2F),
                   ),
@@ -673,8 +714,16 @@ class _UserBookingPageState extends State<UserBookingPage> {
                     MaterialPageRoute(
                       builder: (_) => UserUploadBuktiPage(
                         idTransaksi: _idTransaksi!,
-                        tiket: widget.tiket,
+                        tiket: {
+                          ...widget.tiket,
+
+                          'harga': (((widget.tiket['harga'] ?? 0) * widget.jumlah) +
+                              ((((widget.tiket['harga'] ?? 0) * widget.jumlah) * 0.11).round())),
+
+                          'jumlah': widget.jumlah,
+                        },
                         event: widget.event,
+                        jumlah: widget.jumlah,
                         timer: _timer,
                       ),
                     ),
