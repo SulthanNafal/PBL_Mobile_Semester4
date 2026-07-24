@@ -59,7 +59,6 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
   // TAMBAH / EDIT TIKET
   // =========================
   void _showTiketForm({Map<String, dynamic>? tiket}) {
-    final namaTiketController = TextEditingController(text: tiket?['nama_tiket']);
     final kuotaController = TextEditingController(text: tiket?['kuota']?.toString());
     final hargaController = TextEditingController(text: tiket?['harga']?.toString());
     final kategoriController = TextEditingController(text: tiket?['kategori']);
@@ -96,13 +95,6 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // NAMA TIKET
-                TextField(
-                  controller: namaTiketController,
-                  decoration: _inputDecoration('Nama Tiket'),
-                ),
-                const SizedBox(height: 12),
-
                 // KUOTA
                 TextField(
                   controller: kuotaController,
@@ -119,10 +111,10 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // KATEGORI
+                // KATEGORI (menggantikan Nama Tiket, cukup 1 kolom)
                 TextField(
                   controller: kategoriController,
-                  decoration: _inputDecoration('Kategori (VIP, Reguler, dll)'),
+                  decoration: _inputDecoration('Kategori Tiket (VIP, Reguler, dll)'),
                 ),
                 const SizedBox(height: 12),
 
@@ -230,7 +222,7 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
                     onPressed: () async {
                       await _saveTiket(
                         tiketId: tiket?['id'],
-                        namaTiket: namaTiketController.text.trim(),
+                        namaTiket: kategoriController.text.trim(),
                         kuota: int.tryParse(kuotaController.text.trim()) ?? 0,
                         harga: double.tryParse(hargaController.text.trim()) ?? 0,
                         kategori: kategoriController.text.trim(),
@@ -640,7 +632,7 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  tiket['nama_tiket'] ?? '-',
+                                  tiket['kategori'] ?? tiket['nama_tiket'] ?? '-',
                                   style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
                               ),
@@ -668,7 +660,6 @@ class _AdminEventDetailPageState extends State<AdminEventDetailPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 4),
-                              Text('Kategori: ${tiket['kategori'] ?? '-'}'),
                               Text('Kuota: ${tiket['kuota'] ?? 0}'),
                               Text('Harga: Rp ${tiket['harga'] ?? 0}'),
                               Text('Mulai: ${tiket['tanggal_mulai'] ?? '-'}'),
