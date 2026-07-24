@@ -78,7 +78,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
     final kuota = tiketData['kuota'] ?? 0;
 
-    final jumlah = widget.tiket['jumlah'] ?? 1;
+    final jumlah = widget.jumlah;
 
     if (kuota < jumlah) {
       throw Exception('Kuota tiket tidak mencukupi');
@@ -109,7 +109,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
 
     final kuota = tiketData['kuota'] ?? 0;
 
-    final jumlah = widget.tiket['jumlah'] ?? 1;
+    final jumlah = widget.jumlah;
 
     await supabase
         .schema('ursaevent')
@@ -261,7 +261,7 @@ class _UserBookingPageState extends State<UserBookingPage> {
       // CEK & KURANGI KUOTA
       await _decrementKuota();
 
-      final jumlah = widget.tiket['jumlah'] ?? widget.jumlah;
+      final jumlah = widget.jumlah;
 
       final harga = widget.tiket['harga'] ?? 0;
 

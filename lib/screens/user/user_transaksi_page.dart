@@ -128,12 +128,18 @@ class _UserTransaksiPageState
         final kuota =
             tiketData['kuota'] ?? 0;
 
-        // kembalikan kuota
+        // jumlah tiket yang dipesan pada transaksi ini
+        final jumlahTiket =
+        (trx['jumlah'] is int)
+            ? trx['jumlah'] as int
+            : int.tryParse('${trx['jumlah']}') ?? 1;
+
+        // kembalikan kuota sesuai jumlah tiket yang dipesan
         await supabase
             .schema('ursaevent')
             .from('tikets')
             .update({
-          'kuota': kuota + 1
+          'kuota': kuota + jumlahTiket
         })
             .eq(
           'id',

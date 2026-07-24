@@ -26,6 +26,96 @@ class _CrewTiketDetailPageState
 
   bool isLoading = false;
 
+  // status tiket saat halaman dibuka (dari hasil scan)
+  late String _status;
+
+  bool get _sudahTerpakai =>
+      _status == 'expired';
+
+  @override
+  void initState() {
+    super.initState();
+
+    _status =
+        widget.trx['status']?.toString() ?? '';
+
+    // kalau tiket sudah expired (sudah terpakai) saat pertama dibuka,
+    // langsung tampilkan popup peringatan
+    if (_sudahTerpakai) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) {
+        _showSudahTerpakaiDialog();
+      });
+    }
+  }
+
+  // =========================
+  // POPUP TIKET SUDAH TERPAKAI
+  // =========================
+  void _showSudahTerpakaiDialog() {
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+
+      builder: (_) {
+
+        return AlertDialog(
+
+          shape: RoundedRectangleBorder(
+            borderRadius:
+            BorderRadius.circular(15),
+          ),
+
+          title: const Row(
+            children: [
+
+              Icon(
+                Icons.error_outline,
+                color: Colors.red,
+              ),
+
+              SizedBox(width: 10),
+
+              Expanded(
+                child: Text(
+                  "Tiket Sudah Terpakai",
+                ),
+              ),
+            ],
+          ),
+
+          content: const Text(
+            "Tiket ini sudah pernah digunakan (check-in) sebelumnya "
+                "dan tidak dapat digunakan lagi.",
+          ),
+
+          actions: [
+
+            ElevatedButton(
+
+              onPressed: () {
+
+                // tutup popup
+                Navigator.pop(context);
+
+              },
+
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+
+              child: const Text("OK"),
+            )
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> acceptTicket() async {
 
     try {
@@ -33,6 +123,35 @@ class _CrewTiketDetailPageState
       setState(() {
         isLoading = true;
       });
+
+      // CEK ULANG STATUS TERBARU DARI DATABASE
+      // (mencegah tiket yang sama di-checkin 2x oleh crew berbeda
+      // secara bersamaan)
+      final latest = await supabase
+          .schema('ursaevent')
+          .from('transaksis')
+          .select('status')
+          .eq(
+        'id_transaksi',
+        widget.trx['id_transaksi'],
+      )
+          .single();
+
+      final latestStatus =
+          latest['status']?.toString() ?? '';
+
+      if (latestStatus == 'expired') {
+
+        if (!mounted) return;
+
+        setState(() {
+          _status = latestStatus;
+          isLoading = false;
+        });
+
+        _showSudahTerpakaiDialog();
+        return;
+      }
 
       // update status tiket
       await supabase
@@ -49,6 +168,10 @@ class _CrewTiketDetailPageState
       );
 
       if (!mounted) return;
+
+      setState(() {
+        _status = 'expired';
+      });
 
       // popup berhasil
       showDialog(
@@ -267,8 +390,7 @@ class _CrewTiketDetailPageState
 
                     _item(
                       "Status",
-                      widget.trx[
-                      'status'],
+                      _status,
                     ),
                   ],
                 ),
@@ -324,14 +446,16 @@ class _CrewTiketDetailPageState
                   ElevatedButton.icon(
 
                     onPressed:
-                    isLoading
+                    (isLoading || _sudahTerpakai)
                         ? null
                         : acceptTicket,
 
                     style:
                     ElevatedButton.styleFrom(
                       backgroundColor:
-                      Colors.green,
+                      _sudahTerpakai
+                          ? Colors.grey
+                          : Colors.green,
 
                       foregroundColor:
                       Colors.white,
@@ -349,13 +473,17 @@ class _CrewTiketDetailPageState
                         Colors.white,
                       ),
                     )
-                        : const Icon(
-                      Icons.check,
+                        : Icon(
+                      _sudahTerpakai
+                          ? Icons.block
+                          : Icons.check,
                     ),
 
                     label:
-                    const Text(
-                      "Accept",
+                    Text(
+                      _sudahTerpakai
+                          ? "Sudah Terpakai"
+                          : "Accept",
                     ),
                   ),
                 ),
